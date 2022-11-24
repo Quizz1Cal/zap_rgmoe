@@ -5,3 +5,4 @@
 
 ^.*playground.*$
 ^.*Notes.*$
+^README.Rmd$

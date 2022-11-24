@@ -5,25 +5,28 @@
 \title{ZAP algorithm using RGMOE z-value model}
 \usage{
 zap_v2(
-  Xs,
   Z,
+  X,
   alpha = 0.05,
   alpha_m = 0.2,
-  hyp_params,
-  params_init,
+  K,
+  lambda,
+  gamma,
   EM_gating_option = F,
   zap_verbose = T,
   EM_verbose = F
 )
 }
 \arguments{
-\item{Xs}{dataframe of predictors (standardised), EXCLUDING intercept col}
-
 \item{Z}{numeric vector of observed z-values to fit}
+
+\item{X}{dataframe of predictors (standardised), EXCLUDING intercept col}
 
 \item{alpha}{FDR control level}
 
 \item{alpha_m}{Hyperparameter for non-interactive threshold}
+
+\item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
 }
 \value{
 Vector of indices for samples to reject

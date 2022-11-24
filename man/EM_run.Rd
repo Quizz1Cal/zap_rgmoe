@@ -8,9 +8,11 @@ EM_run(
   Zs,
   is_masked,
   X,
+  K,
   params_init,
   hyp_params,
   gating_option = FALSE,
+  max_it = 1000,
   verbose = TRUE
 )
 }

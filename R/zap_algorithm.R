@@ -59,7 +59,6 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
 #'
 #' @return FDP_finite estimate
 #'
-#' @examples
 #' Z <- c(0.213, 1.652, 0.758, -1.149, -0.664)
 #' compute_FDP_finite_est(Z, rep(0.15, 5), rep(0.85, 5))
 #' ## returns 1

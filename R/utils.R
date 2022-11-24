@@ -4,7 +4,6 @@
 #'
 #' @return Vector of indices
 #'
-#' @examples
 #' which.max.with_ties(c(10,2,10,3))  # returns [1] 1 3
 which.max.with_ties <- function(x) {
     # Reports vector of indices for vector achieving max(x)

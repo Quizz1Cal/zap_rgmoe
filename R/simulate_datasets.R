@@ -58,7 +58,7 @@ make_zap_simulated_dataset <- function(setup=1, n=5000, sigma=1,
                 mu.r=mu.r, mu.l=mu.l))
 }
 
-make_all_simulation_study_dataset_instances <- function(n=5000, nrep=150, sigma=1) {
+make_all_simulation_study_dataset_instances <- function(n=5000, nreps=150, sigma=1) {
     # Hyperparameters
     zetas <- matrix(c(0,0.5,1,
                       0,0.7,1,
@@ -81,7 +81,7 @@ make_all_simulation_study_dataset_instances <- function(n=5000, nrep=150, sigma=
 
                 for (r in 1:nreps) {
                     # Generate and cache data
-                    data <- zap.rgmoe:::make_zap_simulated_dataset(
+                    data <- make_zap_simulated_dataset(
                         setup=s, n=n, sigma=sigma, eta=eta,zeta=zeta,eps=eps)
                     all_data[[s]][[e]][[z]][[r]] <- data
                 }
@@ -97,7 +97,7 @@ make_highly_clustered_dataset <- function(n=500, K) {
     # K must be odd to generate a N(0,1)-category
     stopifnot(round(K) == K & K > 1 & K %% 2 == 1)
     mus <- 5*(1:K)
-    null_k <- median(1:K)
+    null_k <- stats::median(1:K)
     mus <- mus - mean(mus)
     stopifnot(mus[null_k] == 0)
 

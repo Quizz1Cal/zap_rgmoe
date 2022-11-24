@@ -15,12 +15,12 @@ compute_FDP_finite_est(Z, sl, sr)
 }
 \value{
 FDP_finite estimate
+
+Z <- c(0.213, 1.652, 0.758, -1.149, -0.664)
+compute_FDP_finite_est(Z, rep(0.15, 5), rep(0.85, 5))
+\subsection{returns 1}{
+}
 }
 \description{
 Return FDP_estimate without thresholding
-}
-\examples{
-Z <- c(0.213, 1.652, 0.758, -1.149, -0.664)
-compute_FDP_finite_est(Z, rep(0.15, 5), rep(0.85, 5))
-## returns 1
 }

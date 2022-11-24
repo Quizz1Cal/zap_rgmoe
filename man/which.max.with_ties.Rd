@@ -11,10 +11,9 @@ which.max.with_ties(x)
 }
 \value{
 Vector of indices
+
+which.max.with_ties(c(10,2,10,3))  # returns \link{1} 1 3
 }
 \description{
 Return all element indices attaining vector maxima
-}
-\examples{
-which.max.with_ties(c(10,2,10,3))  # returns [1] 1 3
 }
