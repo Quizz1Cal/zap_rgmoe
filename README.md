@@ -6,7 +6,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of zap.rgmoe is to …
+The goal of zap.rgmoe is to improve zap.
 
 ## Installation
 

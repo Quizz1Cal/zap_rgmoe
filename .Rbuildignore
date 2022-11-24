@@ -1,9 +1,7 @@
 ^zap\.rgmoe\.Rproj$
 ^\.Rproj\.user$
-^NOTES*$
 ^R\.ignore\.$
-^R\.deprec\.*$
-^.*\.Rmd$
-^.*\.html$
-^\.github$
 ^\.git$
+
+^.*playground.*$
+^.*Notes.*$
