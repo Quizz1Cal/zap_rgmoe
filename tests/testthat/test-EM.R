@@ -16,7 +16,7 @@ test_that("Degenerate 3rd expert during EM run", {
     # TO COMPLETE ...
     if (F) {
         data <- withr::with_seed(5, make_EM_iteration_instance(n=2500, mask_prop=0.3))
-        withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
+        withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X, data$K,
                                    params_init=data, hyp_params=data))
     }
 })

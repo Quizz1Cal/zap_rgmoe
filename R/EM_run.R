@@ -5,7 +5,7 @@
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
 #'
 #' @return list of parameter estimates (w0, w, beta0, beta, sigma2)
-EM_run <- function(Zs, is_masked, X, params_init, hyp_params,
+EM_run <- function(Zs, is_masked, X, K, params_init, hyp_params,
                                 gating_option=FALSE, max_it=1000, verbose=TRUE) {
     w0 <- params_init$w0
     w <- params_init$w
@@ -15,22 +15,11 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params,
     lambda <- hyp_params$lambda
     gamma <- hyp_params$gamma
 
+    stop_if_inconsistent_dims(Zs,is_masked,  X, w0, w, beta0, beta,
+                              sigma2, lambda, gamma)
+
     n <- dim(X)[1]
     p <- dim(X)[2]
-    K <- length(beta0)
-
-    stopifnot(dim(Zs)[1] == n,
-              dim(Zs)[2] == 2,
-              length(is_masked) == n)
-    stopifnot(dim(beta)[1] == p,
-              dim(w)[1] == p)
-    stopifnot(length(beta0)==K,
-              dim(beta)[2]==K,
-              length(sigma2)==K,
-              length(lambda)==K,
-              length(gamma)==K-1,
-              length(w0)==K-1,
-              dim(w)[2]==K-1)
 
     eps <- 1e-6
 
@@ -78,6 +67,26 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params,
     }
     # Done
     return(list(w0=w0,w=w,beta0=beta0,beta=beta,sigma2=sigma2))
+}
+
+stop_if_inconsistent_dims <- function(Zs, is_masked, X, w0, w, beta0, beta,
+                                      sigma2, lambda, gamma) {
+    n <- dim(X)[1]
+    p <- dim(X)[2]
+    K <- length(beta0)
+
+    stopifnot(dim(Zs)[1] == n,
+              dim(Zs)[2] == 2,
+              length(is_masked) == n)
+    stopifnot(dim(beta)[1] == p,
+              dim(w)[1] == p)
+    stopifnot(length(beta0)==K,
+              dim(beta)[2]==K,
+              length(sigma2)==K,
+              length(lambda)==K,
+              length(gamma)==K-1,
+              length(w0)==K-1,
+              dim(w)[2]==K-1)
 }
 
 EM_print_header <- function(step, L2) {

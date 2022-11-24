@@ -1,14 +1,14 @@
 Package: zap.rgmoe
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: z-value based covariate-adaptive testing with regularised Gaussian Mixture-of-Experts
+Version: 0.0.1
 Authors@R: c(
     person("Callum", "Holmes", role = c("aut")),
     person("Dennis", "Leung", 
       email="dennis.leung@unimelb.edu.au", role=c("aut", "cre"),
       comment = c(ORCID = "0000-0002-5924-8161")
     ))
-Description: Revision of `zap` package, using Regularised Gaussian 
-    Mixture-of-experts (RGMOE) to improve power.
+Description: Revision of `zap` package, using regularised Gaussian 
+    Mixture-of-Experts (RGMOE) working model to improve power.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8

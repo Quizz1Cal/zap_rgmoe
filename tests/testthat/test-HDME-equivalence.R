@@ -270,7 +270,7 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
-    zap_params <- EM_run(data$Zs, data$is_masked, data$X, data, data,
+    zap_params <- EM_run(data$Zs, data$is_masked, data$X, data$K, data, data,
                          gating_option=T, verbose=FALSE)
     zap_loglik <- loglik(data$Zs, data$is_masked, data$X, zap_params$w0,
                          zap_params$w, zap_params$beta0, zap_params$beta,
@@ -282,8 +282,6 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
     hdme_loglik <- RMoE:::GLOG(X=X_hdme, Y=data$Zs[,1], wk=hdme_params$wk,
                                betak=hdme_params$betak, S=hdme_params$sigma,
                                lambda=data$lambda, gamma=data$gamma, rho=0)
-    print(zap_loglik)
-    print(hdme_loglik)
 
     expect_lte(zap_loglik, hdme_loglik)
 

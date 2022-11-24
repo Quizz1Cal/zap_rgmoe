@@ -1,24 +1,31 @@
 #' ZAP algorithm using RGMOE z-value model
 #'
-#' @param Xs dataframe of predictors (standardised), EXCLUDING intercept col
 #' @param Z numeric vector of observed z-values to fit
+#' @param X dataframe of predictors (standardised), EXCLUDING intercept col
 #' @param alpha FDR control level
 #' @param alpha_m Hyperparameter for non-interactive threshold
-#'
+#' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
+
 #' @return Vector of indices for samples to reject
 #' @export
-zap_v2 <- function(Xs, Z, alpha=0.05, alpha_m=0.2, hyp_params, params_init,
+zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
                    EM_gating_option=F, zap_verbose=T, EM_verbose=F) {
-    stopifnot(alpha > 0, length(Z) > 0, dim(Xs)[1] == length(Z))
+    stopifnot(alpha > 0, length(Z) > 0, dim(X)[1] == length(Z))
+
     Z.pairs <- cbind(Z, mask_Z(Z)) # Masking pairs
     n <- length(Z)
+    p <- dim(X)[2]
     masked_set <- 1:n # masked data index set
 
     # Specific params, hyperparams for model
-    model_params <- params_init
+    model_params <- list(w0=rep(0, K-1),
+                         w=matrix(0, nrow=p, ncol=K-1),
+                         beta0=rep(0, K),
+                         beta=matrix(0, nrow=p, ncol=K),
+                         sigma2=stats::runif(K, min=1, max=5))
+    hyp_params <- list(lambda=lambda, gamma=gamma)
 
-    # TODO: Exactly how many iterations?
-    # TODO: Standardising was something I hadn't considered ... hmm. Need for FDP?
+    # TODO: Standardising was something I hadn't considered ... hmm.
     for (t in 1:n) {
         # Compute thresholds specific to 'thresholdless' ZAP
         sl <- alpha_m * (1:n %in% masked_set)
@@ -29,10 +36,10 @@ zap_v2 <- function(Xs, Z, alpha=0.05, alpha_m=0.2, hyp_params, params_init,
         if (FDP_t > alpha) {
             # unmask pair with best q (which in turn, will update sl, sr)
             is_masked <- 1:n %in% masked_set
-            model_params <- EM_run(Z.pairs, is_masked, Xs, params_init=model_params,
+            model_params <- EM_run(Z.pairs, is_masked, X, K, params_init=model_params,
                                    hyp_params=hyp_params, gating_option=EM_gating_option,
                                    verbose=EM_verbose)
-            q_est <- q_estimates(Z.pairs, Xs, model_params)
+            q_est <- q_estimates(Z.pairs, X, model_params)
             masked_set <- update_masked_set(masked_set, q_est)
         } else {
             rejections <- select_rejections(Z, sl, sr)
@@ -42,6 +49,7 @@ zap_v2 <- function(Xs, Z, alpha=0.05, alpha_m=0.2, hyp_params, params_init,
     }
     stop("Did not achieve ZAP stopping criteria")
 }
+
 
 #' Return FDP_estimate without thresholding
 #'

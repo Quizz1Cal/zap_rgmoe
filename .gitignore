@@ -3,3 +3,11 @@
 .Rdata
 .httr-oauth
 .DS_Store
+
+.gitignore
+.Rbuildignore
+
+R/ignore
+
+*playground*
+*Notes*
