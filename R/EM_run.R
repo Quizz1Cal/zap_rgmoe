@@ -5,7 +5,7 @@
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
 #'
 #' @return list of parameter estimates (w0, w, beta0, beta, sigma2)
-EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=10,
+EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
                    tol=1e-4, gating_option=FALSE, verbose=FALSE) {
 
     stop_if_inconsistent_dims(Zs, is_masked, X, params_init, hyp_params)
@@ -17,14 +17,18 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=10,
 
     dataset <- list(Zs=Zs, is_masked=is_masked, X=X)
 
-    params <- SQUAREM::fpiter(par_vec, fixptfn=EM_fixed_pt_fn,
+    res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
                                objfn=EM_objfn,
                                dataset=dataset,
                                hyp_params=hyp_params, verbose=verbose,
                                gating_option=gating_option,
                                control=list(tol=tol, maxiter=maxit))
+    if (verbose) {
+        print(sprintf("EM Completed in %d Iterations (Exit status %d)",
+                      res$fpevals, res$convergence))
+    }
 
-    return(params_vec_to_list(params$par, hyp_params))
+    return(params_vec_to_list(res$par, hyp_params))
 }
 
 params_vec_to_list <- function(params_vec, hyp_params) {
@@ -52,7 +56,7 @@ EM_objfn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
                   hyp_params$gamma, hyp_params$lambda))
 }
 
-EM_fixed_pt_fn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
+EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, gating_option, verbose) {
     params <- params_vec_to_list(params_vec, hyp_params)
     w0 <- params$w0
     w <- params$w
