@@ -14,10 +14,11 @@ test_that("Masked D-estimates can handle small eps-small dnorm", {
 
 test_that("Degenerate 3rd expert during EM run", {
     # TO COMPLETE ...
-    if (F) {
+    if (T) {
         data <- withr::with_seed(5, make_EM_iteration_instance(n=2500, mask_prop=0.3))
-        withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X, data$K,
-                                   params_init=data, hyp_params=data))
+        out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
+                                   params_init=data, hyp_params=data,
+                                   verbose=TRUE, maxit=3))
     }
 })
 

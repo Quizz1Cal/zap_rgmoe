@@ -2,14 +2,21 @@
 #'
 #' @param Z numeric vector of observed z-values to fit
 #' @param X dataframe of predictors (standardised), EXCLUDING intercept col
-#' @param alpha FDR control level
+#' @param alpha targeted FDR level.  Default to 0.05.
+#' @param maxit maximum number of iterations for every EM update
+#' @param nfits maximum number of EM updates during the procedure. Default to <TODO>
 #' @param alpha_m Hyperparameter for non-interactive threshold
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
 
 #' @return Vector of indices for samples to reject
 #' @export
 zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
-                   EM_gating_option=F, zap_verbose=T, EM_verbose=F) {
+                   maxit=10,
+                   tol=1e-4,
+                   nfits=100,
+                   # model_select=F,
+                   EM_gating_option=F,
+                   zap_verbose=T, EM_verbose=F) {
     stopifnot(alpha > 0, length(Z) > 0, dim(X)[1] == length(Z))
 
     Z.pairs <- cbind(Z, mask_Z(Z)) # Masking pairs
@@ -23,7 +30,7 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
                          beta0=rep(0, K),
                          beta=matrix(0, nrow=p, ncol=K),
                          sigma2=stats::runif(K, min=1, max=5))
-    hyp_params <- list(lambda=lambda, gamma=gamma)
+    hyp_params <- list(K=K, p=p, lambda=lambda, gamma=gamma)
 
     # TODO: Standardising was something I hadn't considered ... hmm.
     for (t in 1:n) {
@@ -36,8 +43,10 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
         if (FDP_t > alpha) {
             # unmask pair with best q (which in turn, will update sl, sr)
             is_masked <- 1:n %in% masked_set
-            model_params <- EM_run(Z.pairs, is_masked, X, K, params_init=model_params,
-                                   hyp_params=hyp_params, gating_option=EM_gating_option,
+            model_params <- EM_run(Z.pairs, is_masked, X,
+                                   params_init=model_params,
+                                   hyp_params=hyp_params,
+                                   gating_option=EM_gating_option,
                                    verbose=EM_verbose)
             q_est <- q_estimates(Z.pairs, X, model_params)
             masked_set <- update_masked_set(masked_set, q_est)

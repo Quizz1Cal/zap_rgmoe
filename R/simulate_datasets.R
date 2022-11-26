@@ -50,9 +50,10 @@ make_zap_simulated_dataset <- function(setup=1, n=5000, sigma=1,
                                                   sd=c(1, sigma, sigma))
     }
     is_null <- (delta == 1)
+    p.vals <- 2*pnorm(-abs(Z))
 
     return(list(name=paste("ZAP Simulated Data - Setup: ", setup),
-                Z=Z, X=X, delta=delta, true_pis=true_pis,
+                Z=Z, X=X, p.vals=p.vals, delta=delta, true_pis=true_pis,
                 null_probs=true_pis[,1], is_null=is_null, densities=densities,
                 eta=eta, zeta=zeta, eps=eps, sigma=sigma,
                 mu.r=mu.r, mu.l=mu.l))

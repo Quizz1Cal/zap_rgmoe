@@ -1,79 +1,113 @@
 #' Title
 #'
 #' @param params_init list of initial values for parameters (w0, w, beta0, beta, sigma2)
-#' @param hyp_params list of fixed hyperparameter values (lambda, gamma)
+#' @param hyp_params list of fixed hyperparameter values (K, p, lambda, gamma)
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
 #'
 #' @return list of parameter estimates (w0, w, beta0, beta, sigma2)
-EM_run <- function(Zs, is_masked, X, K, params_init, hyp_params,
-                                gating_option=FALSE, max_it=1000, verbose=TRUE) {
-    w0 <- params_init$w0
-    w <- params_init$w
-    beta0 <- params_init$beta0
-    beta <- params_init$beta
-    sigma2 <- params_init$sigma2
-    lambda <- hyp_params$lambda
-    gamma <- hyp_params$gamma
+EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=10,
+                   tol=1e-4, gating_option=FALSE, verbose=FALSE) {
 
-    stop_if_inconsistent_dims(Zs,is_masked,  X, w0, w, beta0, beta,
-                              sigma2, lambda, gamma)
+    stop_if_inconsistent_dims(Zs, is_masked, X, params_init, hyp_params)
 
-    n <- dim(X)[1]
-    p <- dim(X)[2]
+    # squarem takes vector arguments
+    # note matrices are converted COL-BY-COL (e.g. [1 3; 2 4] -> 1,2,3,4)
+    par_vec <- c(params_init$w0, params_init$w, params_init$beta0,
+                 params_init$beta, params_init$sigma2)
 
-    eps <- 1e-6
+    dataset <- list(Zs=Zs, is_masked=is_masked, X=X)
 
-    L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
-    step <- 1
+    params <- SQUAREM::fpiter(par_vec, fixptfn=EM_fixed_pt_fn,
+                               objfn=EM_objfn,
+                               dataset=dataset,
+                               hyp_params=hyp_params, verbose=verbose,
+                               gating_option=gating_option,
+                               control=list(tol=tol, maxiter=maxit))
 
-    repeat {
-        if (verbose) {
-            EM_print_header(step, L2)
-        }
+    return(params_vec_to_list(params$par, hyp_params))
+}
 
-        L1 <- L2
-        # Compute E-step estimates
-        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+params_vec_to_list <- function(params_vec, hyp_params) {
+    K <- hyp_params$K
+    p <- hyp_params$p
+    sizes <- c(K-1, p*(K-1), K, K*p, K)
+    offsets <- c(0,cumsum(sizes))
+    stopifnot(length(params_vec) == sum(sizes))
 
-        # Compute beta0, beta updates (using (possibly) parallel CD methods)
-        expert_update <- compute_beta_update(X, D, beta0, beta, sigma2, lambda)
-        beta0 <- expert_update$beta0
-        beta <- expert_update$beta
-
-        # Compute w0, w updates (using one of the CD methods)
-        if (gating_option) {
-            gate_update <- CoorGateP(X, w0, w, D$D0, gamma, rho=0)
-        } else {
-            gate_update <- CoorGateP1(X, w0, w, D$D0, gamma, rho=0)
-        }
-        w0 <- gate_update$w0
-        w <- gate_update$w
-
-        # Second inner loop - compute E-step estimates
-        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
-
-        # Compute sigma2 updates
-        sigma2 <- compute_sigma2_update(X, D, beta0, beta)
-
-        L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
-        step <- step+1
-        if (verbose) {
-            EM_print_vars(beta0, beta, w0, w, sigma2)
-        }
-
-        # Convergence criteria check
-        if((L2-L1)/abs(L1) < eps | step >= max_it) break
-        # if(abs(L2-L1/L1) < 1e-3) break
-    }
-    # Done
+    w0 <- params_vec[offsets[1] + 1:sizes[1]]
+    w <- matrix(params_vec[offsets[2] + 1:sizes[2]],
+                nrow=p)
+    beta0 <- params_vec[offsets[3] + 1:sizes[3]]
+    beta <- matrix(params_vec[offsets[4] + 1:sizes[4]],
+                nrow=p)
+    sigma2 <- params_vec[offsets[5] + 1:sizes[5]]
     return(list(w0=w0,w=w,beta0=beta0,beta=beta,sigma2=sigma2))
 }
 
-stop_if_inconsistent_dims <- function(Zs, is_masked, X, w0, w, beta0, beta,
-                                      sigma2, lambda, gamma) {
+EM_objfn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
+    params <- params_vec_to_list(params_vec, hyp_params)
+
+    return(loglik(dataset$Zs, dataset$is_masked, dataset$X,
+                  params$w0, params$w, params$beta0, params$beta, params$sigma2,
+                  hyp_params$gamma, hyp_params$lambda))
+}
+
+EM_fixed_pt_fn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
+    params <- params_vec_to_list(params_vec, hyp_params)
+    w0 <- params$w0
+    w <- params$w
+    beta0 <- params$beta0
+    beta <- params$beta
+    sigma2 <- params$sigma2
+    lambda <- hyp_params$lambda
+    gamma <- hyp_params$gamma
+    Zs <- dataset$Zs
+    is_masked <- dataset$is_masked
+    X <- dataset$X
+
+    # Compute E-step estimates
+    D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+
+    # Compute beta0, beta updates (using (possibly) parallel CD methods)
+    expert_update <- compute_beta_update(X, D, beta0, beta, sigma2, lambda)
+    beta0 <- expert_update$beta0
+    beta <- expert_update$beta
+
+    # Compute w0, w updates (using one of the CD methods)
+    if (gating_option) {
+        gate_update <- CoorGateP(X, w0, w, D$D0, gamma, rho=0)
+    } else {
+        gate_update <- CoorGateP1(X, w0, w, D$D0, gamma, rho=0)
+    }
+    w0 <- gate_update$w0
+    w <- gate_update$w
+
+    # Second inner loop - compute E-step estimates
+    D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+
+    # Compute sigma2 updates
+    sigma2 <- compute_sigma2_update(X, D, beta0, beta)
+
+    if (verbose) {
+        L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
+        EM_print_header(L2)
+        EM_print_vars(beta0, beta, w0, w, sigma2)
+    }
+    return(c(w0,w,beta0,beta,sigma2))
+}
+
+stop_if_inconsistent_dims <- function(Zs,is_masked, X, params, hyp_params) {
+    w0 <- params$w0
+    w <- params$w
+    beta0 <- params$beta0
+    beta <- params$beta
+    sigma2 <- params$sigma2
+    lambda <- hyp_params$lambda
+    gamma <- hyp_params$gamma
+
     n <- dim(X)[1]
-    p <- dim(X)[2]
-    K <- length(beta0)
+    K <- hyp_params$K
+    p <- hyp_params$p
 
     stopifnot(dim(Zs)[1] == n,
               dim(Zs)[2] == 2,
@@ -89,15 +123,14 @@ stop_if_inconsistent_dims <- function(Zs, is_masked, X, w0, w, beta0, beta,
               dim(w)[2]==K-1)
 }
 
-EM_print_header <- function(step, L2) {
-    message("ZAP Inner EM-RGMoE: Iteration: ", step,
-            " | log-likelihood: "  , round(L2, digits= 2))
+EM_print_header <- function(L2) {
+    message("EM Iteration | log-likelihood: "  , round(L2, digits= 2))
 }
 
 EM_print_vars <- function(beta0, beta, w0, w, sigma2) {
-    print(paste("> beta0: ", round(beta0, 5)))
-    print(paste("> beta: ", round(beta, 5)))
-    print(paste("> w0: ", round(w0, 5)))
-    print(paste("> w: ", round(w, 5)))
-    print(paste("> sigma2: ", round(sigma2, 5)))
+    print(paste("> w0: ", toString(round(w0, 5))))
+    print(paste("> w: ", toString(round(w, 5))))
+    print(paste("> beta0: ", toString(round(beta0, 5))))
+    print(paste("> beta: ", toString(round(beta, 5))))
+    print(paste("> sigma2: ", toString(round(sigma2, 5))))
 }
