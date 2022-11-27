@@ -18,7 +18,7 @@ test_that("Degenerate 3rd expert (and NaN production) at 1e-5 tol near conv.", {
         out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
                                    params_init=data, hyp_params=data,
                                    gating_option=FALSE,
-                                   verbose=TRUE, maxit=500, tol=1e-5))
+                                   verbose=TRUE, maxit=500, tol=1e-4))
     }
 })
 

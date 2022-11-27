@@ -1,4 +1,5 @@
 Package: zap.rgmoe
+Type: Package
 Title: z-value based covariate-adaptive testing with regularised Gaussian Mixture-of-Experts
 Version: 0.0.1
 Authors@R: c(
@@ -24,5 +25,8 @@ Depends:
     R (>= 2.10)
 LazyData: true
 Imports: 
+    Rcpp,
     SQUAREM,
     stats
+LinkingTo: 
+    Rcpp

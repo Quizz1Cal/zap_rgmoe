@@ -7,7 +7,6 @@
 #' @param nfits maximum number of EM updates during the procedure. Default to <TODO>
 #' @param alpha_m Hyperparameter for non-interactive threshold
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
-
 #' @return Vector of indices for samples to reject
 #' @export
 zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,

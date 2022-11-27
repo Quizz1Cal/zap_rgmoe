@@ -8,18 +8,18 @@ EM_run(
   Zs,
   is_masked,
   X,
-  K,
   params_init,
   hyp_params,
+  maxit = 200,
+  tol = 1e-04,
   gating_option = FALSE,
-  max_it = 1000,
-  verbose = TRUE
+  verbose = FALSE
 )
 }
 \arguments{
 \item{params_init}{list of initial values for parameters (w0, w, beta0, beta, sigma2)}
 
-\item{hyp_params}{list of fixed hyperparameter values (lambda, gamma)}
+\item{hyp_params}{list of fixed hyperparameter values (K, p, lambda, gamma)}
 
 \item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
 }

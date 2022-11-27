@@ -12,6 +12,9 @@ zap_v2(
   K,
   lambda,
   gamma,
+  maxit = 10,
+  tol = 1e-04,
+  nfits = 100,
   EM_gating_option = F,
   zap_verbose = T,
   EM_verbose = F
@@ -22,9 +25,13 @@ zap_v2(
 
 \item{X}{dataframe of predictors (standardised), EXCLUDING intercept col}
 
-\item{alpha}{FDR control level}
+\item{alpha}{targeted FDR level.  Default to 0.05.}
 
 \item{alpha_m}{Hyperparameter for non-interactive threshold}
+
+\item{maxit}{maximum number of iterations for every EM update}
+
+\item{nfits}{maximum number of EM updates during the procedure. Default to <TODO>}
 
 \item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
 }
