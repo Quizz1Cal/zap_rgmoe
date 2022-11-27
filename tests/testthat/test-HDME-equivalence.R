@@ -2,7 +2,7 @@ test_that("Pi computations match ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
 
     pi_zap <- compute_pi(data$X, data$w0, data$w)
     X_hdme <- cbind(rep(1,data$n), data$X)
@@ -15,7 +15,7 @@ test_that("HDME Log-likelihood matches ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
@@ -39,7 +39,7 @@ test_that("CoorLQk (wt. w) matches ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
     k <- 2
@@ -67,7 +67,7 @@ test_that("CoorLQk (wt. Beta) reconciles with ZAP on unmasked, equal-variance da
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
     k <- 1
@@ -96,7 +96,7 @@ test_that("HDME E-step matches ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
@@ -122,7 +122,7 @@ test_that("Obj (Gating) matches ZAP on unmasked, equal-variance data", {
 
     for (s in 1:5) {
         # load unmasked test data
-        data <- withr::with_seed(seed=s, make_EM_iteration_instance(mask_prop=0))
+        data <- withr::with_seed(seed=s, make_test_EM_iteration_instance(mask_prop=0))
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
         for (k in 1:2) {
@@ -154,7 +154,7 @@ test_that("Obj (Expert) matches ZAP on unmasked, equal-variance data", {
 
     # load unmasked test data
     for (s in 1:5) {
-        data <- withr::with_seed(s, make_EM_iteration_instance(mask_prop=0))
+        data <- withr::with_seed(s, make_test_EM_iteration_instance(mask_prop=0))
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
         for (k in 1:2) {
@@ -181,7 +181,7 @@ test_that("HDME M-step (Gating) matches ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
@@ -211,7 +211,7 @@ test_that("HDME M-step (Expert, beta) reconciles with ZAP on unmasked, equal-var
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
@@ -241,7 +241,7 @@ test_that("HDME M-step (Expert, sigma2) matches ZAP on unmasked, equal-variance 
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
@@ -266,7 +266,7 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
     withr::local_package("RMoE")
 
     # load unmasked test data
-    data <- withr::with_seed(1, make_EM_iteration_instance(mask_prop=0))
+    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
 

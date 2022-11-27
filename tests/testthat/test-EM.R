@@ -14,7 +14,7 @@ test_that("Masked D-estimates can handle small eps-small dnorm", {
 
 test_that("Degenerate 3rd expert (and NaN production) at 1e-5 tol near conv.", {
     if (T) {
-        data <- withr::with_seed(5, make_EM_iteration_instance(n=2500, mask_prop=0.3))
+        data <- withr::with_seed(5, make_test_EM_iteration_instance(n=2500, mask_prop=0.3))
         out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
                                    params_init=data, hyp_params=data,
                                    gating_option=FALSE,
@@ -32,7 +32,7 @@ test_that("Degenerate sigma2 estimates", {
 
 test_that("M-step (Gating) Methods 1, 2 agree unmasked", {
     # load test data
-    data <- withr::with_seed(2, make_EM_iteration_instance(n=1000, mask_prop=0))
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
 
     # ZAP2
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
@@ -46,7 +46,7 @@ test_that("M-step (Gating) Methods 1, 2 agree unmasked", {
 
 test_that("M-step (Gating) Methods 1, 2 agree with masking", {
     # load MASKED test data
-    data <- withr::with_seed(2, make_EM_iteration_instance(n=1000, mask_prop=0.3))
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0.3))
 
     # ZAP2
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
@@ -59,7 +59,7 @@ test_that("M-step (Gating) Methods 1, 2 agree with masking", {
 })
 
 test_that("Both CoorLQk functions agree on equal-variance, unmasked data", {
-    data <- withr::with_seed(2, make_EM_iteration_instance(n=1000, mask_prop=0))
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
     data$sigma2 <- rep(data$sigma2[1], data$K)
     k <- 2
 

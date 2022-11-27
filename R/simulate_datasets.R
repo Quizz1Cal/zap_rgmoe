@@ -1,6 +1,6 @@
 make_zap_simulated_dataset <- function(setup=1, n=5000, sigma=1,
                                        eta, zeta, eps) {
-    # Generates ZAP's simulated data
+    # Generates ZAP's simulated data sets used in functional evaluation
     # Setup must be 1,2 or 3
     stopifnot(setup %in% 1:3)
 
@@ -92,29 +92,49 @@ make_all_simulation_study_dataset_instances <- function(n=5000, nreps=150, sigma
     return(all_data)
 }
 
+############################ TESTING
 
-# OLD
-make_highly_clustered_dataset <- function(n=500, K) {
-    # K must be odd to generate a N(0,1)-category
-    stopifnot(round(K) == K & K > 1 & K %% 2 == 1)
-    mus <- 5*(1:K)
-    null_k <- stats::median(1:K)
-    mus <- mus - mean(mus)
-    stopifnot(mus[null_k] == 0)
-
-    true_pis <- matrix(1 / K, nrow=n, ncol=K)
-    delta <- apply(stats::rmultinom(n,1,prob=true_pis[1,]),
-                   MARGIN=2, FUN=which.max)
-    Z <- stats::rnorm(n, mean=mus[delta], sd=1)
-    X <- matrix(stats::rnorm(n, mean=mus[delta], sd=2), nrow=n)
-    densities <- c()
-    for (i in 1:n) {
-        densities[i] <- true_pis[i,] %*% stats::dnorm(Z[i], mean=mus, sd=1)
-    }
-    is_null <- (delta == null_k)
-
-    return(list(name="Clustered Data",
-                Z=Z, X=X, delta=delta, true_pis=true_pis,
-                null_probs=true_pis[,null_k], is_null=is_null,
-                densities=densities, mus=mus))
+make_test_zap_problem_instance <- function(n=500) {
+    # Generates a simulated dataset instance from ZAP revised paper
+    dataset <- make_zap_simulated_dataset(setup=1, n=n, sigma=1,
+                                          eta=-2, zeta=1, eps=2.1)
+    Z <- dataset$Z
+    X <- dataset$X
+    return(list(Z=Z, X=X))
 }
+
+make_test_EM_parameter_instance <- function(p, K) {
+    w0=rnorm(K-1)
+    w=matrix(rnorm(p*(K-1)), nrow=p, ncol=K-1)
+    beta0 = rnorm(K,sd=4)
+    beta <- matrix(rnorm(p*K,sd=2), nrow=p, ncol=K)
+    sigma2 <- rep(0.6:2.4, K)[1:K]  # rep(1:3, K)[1:K]
+    gamma <- rep(0.12, K-1)
+    lambda <- rep(0.17, K)
+    return(list(K=K, w0=w0, w=w, beta0=beta0, beta=beta,
+                sigma2=sigma2, gamma=gamma, lambda=lambda))
+}
+
+make_test_EM_iteration_instance <- function(n=500, mask_prop=0) {
+    problem_instance <- make_test_zap_problem_instance(n=n)
+    Z <- problem_instance$Z
+    X <- problem_instance$X
+
+    Z.m <- mask_Z(Z)
+    Zs <- cbind(Z, Z.m)
+    n <- dim(X)[1]
+    p <- dim(X)[2]
+    n_masked <- round(n*mask_prop)
+    is_masked <- sample(c(rep(1,n_masked), rep(0, n-n_masked)),
+                        replace=FALSE)
+
+    # TODO: Reverify on HDME with varied sigma2, tau sets.
+    iter_params <- make_test_EM_parameter_instance(p=p, K=3)
+    iter_params$X <- X
+    iter_params$n <- n
+    iter_params$p <- p
+    iter_params$Zs <- Zs
+    iter_params$is_masked <- is_masked
+    return(iter_params)
+}
+

@@ -12,29 +12,29 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // cpp_D_masked
-arma::mat cpp_D_masked(arma::rowvec zs, arma::rowvec pi, arma::rowvec mu, arma::rowvec sigma);
+arma::mat cpp_D_masked(arma::vec zs, arma::vec pi, arma::vec mu, arma::vec sigma);
 RcppExport SEXP _zap_rgmoe_cpp_D_masked(SEXP zsSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::rowvec >::type zs(zsSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type zs(zsSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma(sigmaSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_D_masked(zs, pi, mu, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
 // cpp_D_unmasked
-arma::mat cpp_D_unmasked(double z, arma::rowvec pi, arma::rowvec mu, arma::rowvec sigma);
+arma::mat cpp_D_unmasked(double z, arma::vec pi, arma::vec mu, arma::vec sigma);
 RcppExport SEXP _zap_rgmoe_cpp_D_unmasked(SEXP zSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type z(zSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type pi(piSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma(sigmaSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_D_unmasked(z, pi, mu, sigma));
     return rcpp_result_gen;
 END_RCPP
@@ -52,7 +52,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // cpp_EM_Estep
-List cpp_EM_Estep(arma::mat Zs, arma::vec is_masked, arma::mat X_f, arma::mat w_f, arma::mat beta_f, arma::rowvec sigma2);
+List cpp_EM_Estep(arma::mat Zs, arma::vec is_masked, arma::mat X_f, arma::mat w_f, arma::mat beta_f, arma::vec sigma2);
 RcppExport SEXP _zap_rgmoe_cpp_EM_Estep(SEXP ZsSEXP, SEXP is_maskedSEXP, SEXP X_fSEXP, SEXP w_fSEXP, SEXP beta_fSEXP, SEXP sigma2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -62,7 +62,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type beta_f(beta_fSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma2(sigma2SEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2));
     return rcpp_result_gen;
 END_RCPP
