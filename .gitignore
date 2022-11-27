@@ -6,5 +6,4 @@
 .gitignore
 .Rbuildignore
 R/ignore
-*playground*
 *Notes*

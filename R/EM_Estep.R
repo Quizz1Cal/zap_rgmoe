@@ -28,6 +28,7 @@ EM_Estep <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2) {
     return(list(D0=D0,D1=D1,D2=D2))
 }
 
+# Works on SINGLE INSTANCES
 compute_masked_E_estimates <- function(zs, x, pi, beta0, beta, sigma2) {
     dmeans <- beta0 + x%*%beta
     # I was adding 1e-10 + before.
@@ -49,9 +50,10 @@ compute_masked_E_estimates <- function(zs, x, pi, beta0, beta, sigma2) {
     return(list(D0=D0,D1=D1,D2=D2))
 }
 
+# Works on SINGLE INSTANCES
 compute_unmasked_E_estimates <- function(z, x, pi, beta0, beta, sigma2) {
-    # x must be a row matrix .. I think at least.
-    dnorms <- stats::dnorm(z, beta0 + x%*%beta, sqrt(sigma2)) # [k]
+    dmeans <- beta0 + x%*%beta
+    dnorms <- stats::dnorm(z, dmeans, sqrt(sigma2)) # [k]
     products <- dnorms * pi
     D0 <- products / rowSums(products)
     D1 <- D0 * z
@@ -59,6 +61,7 @@ compute_unmasked_E_estimates <- function(z, x, pi, beta0, beta, sigma2) {
     return(list(D0=D0,D1=D1,D2=D2))
 }
 
+# Works on ALL INSTANCES
 compute_pi <- function(X, w0, w, verbose=FALSE) {
     n <- dim(X)[1]
     X.full <- cbind(rep(1,n), X)

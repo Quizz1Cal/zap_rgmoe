@@ -4,9 +4,10 @@
 #' @param X dataframe of predictors (standardised), EXCLUDING intercept col
 #' @param alpha targeted FDR level.  Default to 0.05.
 #' @param maxit maximum number of iterations for every EM update
-#' @param nfits maximum number of EM updates during the procedure. Default to <TODO>
+#' @param nfits maximum number of EM updates during the procedure... DEFAULT?
 #' @param alpha_m Hyperparameter for non-interactive threshold
 #' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
+#'
 #' @return Vector of indices for samples to reject
 #' @export
 zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
@@ -14,8 +15,8 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
                    tol=1e-4,
                    nfits=100,
                    # model_select=F,
-                   EM_gating_option=F,
-                   zap_verbose=T, EM_verbose=F) {
+                   EM_gating_option=FALSE,
+                   zap_verbose=TRUE, EM_verbose=FALSE) {
     stopifnot(alpha > 0, length(Z) > 0, dim(X)[1] == length(Z))
 
     Z.pairs <- cbind(Z, mask_Z(Z)) # Masking pairs
@@ -134,4 +135,3 @@ update_masked_set <- function(masked_set, q_est) {
     to_unmask <- i_bests[sample(length(i_bests), size=1)]
     return(masked_set[masked_set != to_unmask])
 }
-

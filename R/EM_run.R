@@ -6,7 +6,7 @@
 #'
 #' @return list of parameter estimates (w0, w, beta0, beta, sigma2)
 EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
-                   tol=1e-4, gating_option=FALSE, verbose=FALSE) {
+                   tol=1e-4, use_cpp=FALSE, gating_option=FALSE, verbose=FALSE) {
 
     stop_if_inconsistent_dims(Zs, is_masked, X, params_init, hyp_params)
 
@@ -20,8 +20,9 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
     res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
                                objfn=EM_objfn,
                                dataset=dataset,
-                               hyp_params=hyp_params, verbose=verbose,
-                               gating_option=gating_option,
+                               hyp_params=hyp_params,
+                               use_cpp=use_cpp,
+                               gating_option=gating_option, verbose=verbose,
                                control=list(tol=tol, maxiter=maxit))
     if (verbose) {
         print(sprintf("EM Completed in %d Iterations (Exit status %d)",
@@ -31,6 +32,7 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
     return(params_vec_to_list(res$par, hyp_params))
 }
 
+# Converting between c() concatenation, and named lists
 params_vec_to_list <- function(params_vec, hyp_params) {
     K <- hyp_params$K
     p <- hyp_params$p
@@ -48,7 +50,8 @@ params_vec_to_list <- function(params_vec, hyp_params) {
     return(list(w0=w0,w=w,beta0=beta0,beta=beta,sigma2=sigma2))
 }
 
-EM_objfn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
+EM_objfn <- function(params_vec, hyp_params, dataset, use_cpp,
+                            gating_option, verbose) {
     params <- params_vec_to_list(params_vec, hyp_params)
 
     return(loglik(dataset$Zs, dataset$is_masked, dataset$X,
@@ -56,7 +59,13 @@ EM_objfn <- function(params_vec, hyp_params, dataset, gating_option, verbose) {
                   hyp_params$gamma, hyp_params$lambda))
 }
 
-EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, gating_option, verbose) {
+# Temporary helper function
+make_X_f <- function(X) {
+    return(cbind(rep(1, dim(X)[1]), X))
+}
+
+EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
+                           gating_option, verbose) {
     params <- params_vec_to_list(params_vec, hyp_params)
     w0 <- params$w0
     w <- params$w
@@ -70,7 +79,13 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, gating_option, verbo
     X <- dataset$X
 
     # Compute E-step estimates
-    D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+    if (use_cpp) {
+        D <- cpp_EM_Estep(Zs, is_masked, make_X_f(X), rbind(w0, w),
+                          rbind(beta0, beta), sigma2)
+    } else {
+        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+    }
+
 
     # Compute beta0, beta updates (using (possibly) parallel CD methods)
     expert_update <- compute_beta_update(X, D, beta0, beta, sigma2, lambda)
@@ -87,7 +102,12 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, gating_option, verbo
     w <- gate_update$w
 
     # Second inner loop - compute E-step estimates
-    D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+    if (use_cpp) {
+        D <- cpp_EM_Estep(Zs, is_masked, make_X_f(X), rbind(w0, w),
+                          rbind(beta0, beta), sigma2)
+    } else {
+        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+    }
 
     # Compute sigma2 updates
     sigma2 <- compute_sigma2_update(X, D, beta0, beta)

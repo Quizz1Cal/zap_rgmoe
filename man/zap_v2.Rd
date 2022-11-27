@@ -31,7 +31,7 @@ zap_v2(
 
 \item{maxit}{maximum number of iterations for every EM update}
 
-\item{nfits}{maximum number of EM updates during the procedure. Default to <TODO>}
+\item{nfits}{maximum number of EM updates during the procedure... DEFAULT?}
 
 \item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
 }

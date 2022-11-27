@@ -3,6 +3,5 @@
 ^R\.ignore\.$
 ^\.git$
 
-^.*playground.*$
 ^.*Notes.*$
 ^README.Rmd$
