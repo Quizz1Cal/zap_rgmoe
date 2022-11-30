@@ -4,7 +4,7 @@ test_that("Pi computations match ZAP on unmasked, equal-variance data", {
     # load unmasked test data
     data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
 
-    pi_zap <- compute_pi(data$X, data$w0, data$w)
+    pi_zap <- pi_matrix(data$X, data$w0, data$w)
     X_hdme <- cbind(rep(1,data$n), data$X)
     wk_hdme <- cbind(data$w0, t(data$w))
     pi_hdme <- RMoE:::Pik(data$n, data$K, X=X_hdme, wk=wk_hdme)
@@ -218,7 +218,7 @@ test_that("HDME M-step (Expert, beta) reconciles with ZAP on unmasked, equal-var
     # ZAP2
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
                           data$w0, data$w, data$beta0, data$beta, data$sigma2)
-    beta_new <- compute_beta_update(data$X, D, data$beta0, data$beta,
+    beta_new <- beta_update(data$X, D, data$beta0, data$beta,
                                      data$sigma2, data$lambda)
     beta_zap2_hdme_fmt <- rbind(beta_new$beta0, beta_new$beta)
 
@@ -248,7 +248,7 @@ test_that("HDME M-step (Expert, sigma2) matches ZAP on unmasked, equal-variance 
     # ZAP
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
                   data$w0, data$w, data$beta0, data$beta, data$sigma2)
-    sigma2_zap2 <- compute_sigma2_update(data$X, D, data$beta0, data$beta)
+    sigma2_zap2 <- sigma2_update(data$X, D, data$beta0, data$beta)
     sigma2_inferred_zap2 <- sum(sigma2_zap2 * colSums(D$D0)) / data$n
 
     # HDME

@@ -9,7 +9,7 @@ loglik <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda) 
     beta = matrix(beta,nrow=p)
     w = matrix(w,nrow=p)
 
-    pis <- compute_pi(X, w0, w)
+    pis <- pi_matrix(X, w0, w)
     mu <- cbind(rep(1,n), X) %*% rbind(beta0, beta)
     dnorms <- matrix(NA, nrow=n, ncol=K)
     for (i in 1:n) {

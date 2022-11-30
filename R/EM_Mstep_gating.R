@@ -1,3 +1,17 @@
+#Find MINIMUM of penalized function
+#u vector of parameters (alpha, beta) represent wk_k.
+#true tau is in c_k
+#tau vector represent by d_k
+
+# Notes:
+# alpha == beta0_k being est.
+# beta == beta_k being est.
+
+# Main changes from RMoE:
+# X no longer has a 1 column. Thus Xmat <- X, d1 <- d
+# u <- alpha, beta inplace.
+# thats it, it was mostly refactoring.
+
 #using Proximal Newton method
 # NOTE that they used to have wk as [K x p]
 CoorGateP = function(X, w0, w, tau, Gamma, rho) {
@@ -11,10 +25,10 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
     repeat {
         w0_old = w0_new
         w_old = w_new
-        Q_old = Fs(X, tau, Gamma, rho, w0_old, w_old)
+        Q_old = Fs(X, tau, w0_old, w_old, Gamma, rho)
         for(k in 1:(K-1)) {
             #First: compute the quadratic approximation w.r.t (w_k): L_Qk
-            P_k = compute_pi(X, w0_new, w_new)[,k]
+            P_k = pi_matrix(X, w0_new, w_new)[,k]
             d_k = P_k*(1-P_k)
             c_k = w0_new[k] + X%*%w_new[,k] + (tau[,k]-P_k)/d_k
             #Second: coordinate descent for maximizing L_Qk
@@ -23,7 +37,7 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
             w0_new[k] <- out[1]
             w_new[,k] <- out[-1]
         }
-        Q_new = Fs(X, tau, Gamma, rho, w0_new, w_new)
+        Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
 
         #-------------BACKTRACKING LINE SEARCH
         t = 1
@@ -31,7 +45,7 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
             t = t*Stepsize
             w0_new = w0_new*t + w0_old*(1-t)
             w_new = w_new*t + w_old*(1-t)
-            Q_new = Fs(X, tau, Gamma, rho, w0_new, w_new)
+            Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
         }
         if((Q_new - Q_old) < eps) break
     }
@@ -51,10 +65,11 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
     repeat {
         w0_old = w0_new
         w_old = w_new
-        Q_old = Fs(X, tau, Gamma, rho, w0_old, w_old)
+        Q_old = Fs(X, tau, w0_old, w_old, Gamma, rho)
         for(k in 1:(K-1)) {
             #First: compute the quadratic approximation w.r.t (w_k): L_Qk
-            P_k = compute_pi(X, w0_new, w_new)[,k]
+            P_k = pi_matrix(X, w0_new, w_new)[,k]
+            # d_k = P_k*(1-P_k) # Was commented out in RMoE
             c_k = w0_new[k] + X%*%w_new[,k] + 4*(tau[,k]-P_k)
 
             #Second: coordinate descent for maximizing L_Qk
@@ -63,7 +78,7 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
             w0_new[k] <- out[1]
             w_new[,k] <- out[-1]
         }
-        Q_new = Fs(X, tau, Gamma, rho, w0_new, w_new)
+        Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
 
         #-------------BACKTRACKING LINE SEARCH
         t = 1
@@ -71,27 +86,13 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
             t = t*Stepsize
             w0_new = w0_new*t + w0_old*(1-t)
             w_new = w_new*t + w_old*(1-t)
-            Q_new = Fs(X, tau, Gamma, rho, w0_new, w_new)
+            Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
         }
         if((Q_new - Q_old) < eps) break
     }
     return(list(w0=w0_new, w=w_new))
 }
 
-
-#Find MINIMUM of penalized function
-#u vector of parameters (alpha, beta) represent wk_k.
-#true tau is in c_k
-#tau vector represent by d_k
-
-# Notes:
-# alpha == beta0_k being est.
-# beta == beta_k being est.
-
-# Main changes:
-# X no longer has a 1 column. Thus Xmat <- X, d1 <- d
-# u <- alpha, beta inplace.
-# thats it, it was mostly refactoring.
 
 # SOME ASPECTS OF ITS INNER COMPUTATION LOOP NEED CHECKING.
 CoorLQk = function(X, Y, tau, alpha, beta, Gammak, rho) {
@@ -131,9 +132,9 @@ obj_gating <- function(tau, X, Y, alpha, beta, Gammak, rho) {
 # The Q(w; theta) gating component of the Q-function
 # rho: artifact from earlier Cham work, should be 0.
 # w: non-bias gating coefficients, [p, K-1]  <- FORMERLY [p+1,K]
-Fs <- function(X, tau, gamma, rho, w0, w) {
+Fs <- function(X, tau, w0, w, gamma, rho) {
     w_1norm = colSums(abs(w))
-    pis <- compute_pi(X, w0, w)
+    pis <- pi_matrix(X, w0, w)
     S0 = sum(tau*log(pis+1e-30))
     S1 = sum(gamma*w_1norm)
     S2 = sum(w^2)*rho/2

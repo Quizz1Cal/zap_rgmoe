@@ -25,8 +25,10 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
                                gating_option=gating_option, verbose=verbose,
                                control=list(tol=tol, maxiter=maxit))
     if (verbose) {
-        print(sprintf("EM Completed in %d Iterations (Exit status %d)",
-                      res$fpevals, res$convergence))
+        success_str <- if(!res$convergence & res$fpevals < maxit) {
+            "CONVERGED"} else "LIKELY DNC"
+        print(sprintf("EM Completed in %d Iterations (%s)",
+                      res$fpevals, success_str))
     }
 
     return(params_vec_to_list(res$par, hyp_params))
@@ -88,7 +90,7 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
 
 
     # Compute beta0, beta updates (using (possibly) parallel CD methods)
-    expert_update <- compute_beta_update(X, D, beta0, beta, sigma2, lambda)
+    expert_update <- beta_update(X, D, beta0, beta, sigma2, lambda)
     beta0 <- expert_update$beta0
     beta <- expert_update$beta
 
@@ -110,7 +112,7 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
     }
 
     # Compute sigma2 updates
-    sigma2 <- compute_sigma2_update(X, D, beta0, beta)
+    sigma2 <- sigma2_update(X, D, beta0, beta)
 
     if (verbose) {
         L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)

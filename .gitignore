@@ -6,4 +6,5 @@
 .gitignore
 .Rbuildignore
 R/ignore
+data/
 *Notes*

@@ -11,9 +11,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// cpp_D_masked
-arma::mat cpp_D_masked(arma::vec zs, arma::vec pi, arma::vec mu, arma::vec sigma);
-RcppExport SEXP _zap_rgmoe_cpp_D_masked(SEXP zsSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
+// cpp_masked_moments
+arma::mat cpp_masked_moments(arma::vec zs, arma::vec pi, arma::vec mu, arma::vec sigma);
+RcppExport SEXP _zap_rgmoe_cpp_masked_moments(SEXP zsSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,13 +21,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type sigma(sigmaSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_D_masked(zs, pi, mu, sigma));
+    rcpp_result_gen = Rcpp::wrap(cpp_masked_moments(zs, pi, mu, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
-// cpp_D_unmasked
-arma::mat cpp_D_unmasked(double z, arma::vec pi, arma::vec mu, arma::vec sigma);
-RcppExport SEXP _zap_rgmoe_cpp_D_unmasked(SEXP zSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
+// cpp_unmasked_moments
+arma::mat cpp_unmasked_moments(double z, arma::vec pi, arma::vec mu, arma::vec sigma);
+RcppExport SEXP _zap_rgmoe_cpp_unmasked_moments(SEXP zSEXP, SEXP piSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,19 +35,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type sigma(sigmaSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_D_unmasked(z, pi, mu, sigma));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cpp_pi_matrix
-arma::mat cpp_pi_matrix(arma::mat X_f, arma::mat w_f);
-RcppExport SEXP _zap_rgmoe_cpp_pi_matrix(SEXP X_fSEXP, SEXP w_fSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_pi_matrix(X_f, w_f));
+    rcpp_result_gen = Rcpp::wrap(cpp_unmasked_moments(z, pi, mu, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -67,12 +55,189 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_beta_update
+arma::mat cpp_beta_update(arma::mat X_f, arma::mat D0, arma::mat D1, arma::mat D2, arma::mat beta_f, arma::vec sigma2, arma::vec lambda);
+RcppExport SEXP _zap_rgmoe_cpp_beta_update(SEXP X_fSEXP, SEXP D0SEXP, SEXP D1SEXP, SEXP D2SEXP, SEXP beta_fSEXP, SEXP sigma2SEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D0(D0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D1(D1SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D2(D2SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type beta_f(beta_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_beta_update(X_f, D0, D1, D2, beta_f, sigma2, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_beta_CoorLQk
+arma::vec cpp_beta_CoorLQk(arma::mat X_f, arma::vec D0k, arma::vec D1k, arma::vec D2k, arma::vec betak_f, double sigma2k, double lambdak);
+RcppExport SEXP _zap_rgmoe_cpp_beta_CoorLQk(SEXP X_fSEXP, SEXP D0kSEXP, SEXP D1kSEXP, SEXP D2kSEXP, SEXP betak_fSEXP, SEXP sigma2kSEXP, SEXP lambdakSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D0k(D0kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D1k(D1kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D2k(D2kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type betak_f(betak_fSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2k(sigma2kSEXP);
+    Rcpp::traits::input_parameter< double >::type lambdak(lambdakSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_beta_CoorLQk(X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_obj_expert
+double cpp_obj_expert(arma::mat X_f, arma::vec D0k, arma::vec D1k, arma::vec D2k, arma::vec betak_f, double sigma2k, double lambdak);
+RcppExport SEXP _zap_rgmoe_cpp_obj_expert(SEXP X_fSEXP, SEXP D0kSEXP, SEXP D1kSEXP, SEXP D2kSEXP, SEXP betak_fSEXP, SEXP sigma2kSEXP, SEXP lambdakSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D0k(D0kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D1k(D1kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type D2k(D2kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type betak_f(betak_fSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2k(sigma2kSEXP);
+    Rcpp::traits::input_parameter< double >::type lambdak(lambdakSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_obj_expert(X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_sigma2_update
+arma::vec cpp_sigma2_update(arma::mat X_f, arma::mat D0, arma::mat D1, arma::mat D2, arma::mat beta_f);
+RcppExport SEXP _zap_rgmoe_cpp_sigma2_update(SEXP X_fSEXP, SEXP D0SEXP, SEXP D1SEXP, SEXP D2SEXP, SEXP beta_fSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D0(D0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D1(D1SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type D2(D2SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type beta_f(beta_fSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_sigma2_update(X_f, D0, D1, D2, beta_f));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_CoorGateP
+arma::mat cpp_CoorGateP(arma::mat X_f, arma::mat w_f, arma::mat tau, arma::vec gamma, double rho);
+RcppExport SEXP _zap_rgmoe_cpp_CoorGateP(SEXP X_fSEXP, SEXP w_fSEXP, SEXP tauSEXP, SEXP gammaSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_CoorGateP(X_f, w_f, tau, gamma, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_CoorGateP1
+arma::mat cpp_CoorGateP1(arma::mat X_f, arma::mat w_f, arma::mat tau, arma::vec gamma, double rho);
+RcppExport SEXP _zap_rgmoe_cpp_CoorGateP1(SEXP X_fSEXP, SEXP w_fSEXP, SEXP tauSEXP, SEXP gammaSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_CoorGateP1(X_f, w_f, tau, gamma, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_CoorLQk
+arma::vec cpp_CoorLQk(arma::mat X_f, arma::vec Y, arma::vec tau, arma::vec wk_f, double gammak, double rho);
+RcppExport SEXP _zap_rgmoe_cpp_CoorLQk(SEXP X_fSEXP, SEXP YSEXP, SEXP tauSEXP, SEXP wk_fSEXP, SEXP gammakSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type wk_f(wk_fSEXP);
+    Rcpp::traits::input_parameter< double >::type gammak(gammakSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_CoorLQk(X_f, Y, tau, wk_f, gammak, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_obj_gating
+double cpp_obj_gating(arma::vec tau, arma::mat X_f, arma::vec Y, arma::vec wk_f, double gammak, double rho);
+RcppExport SEXP _zap_rgmoe_cpp_obj_gating(SEXP tauSEXP, SEXP X_fSEXP, SEXP YSEXP, SEXP wk_fSEXP, SEXP gammakSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type wk_f(wk_fSEXP);
+    Rcpp::traits::input_parameter< double >::type gammak(gammakSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_obj_gating(tau, X_f, Y, wk_f, gammak, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_Fs
+double cpp_Fs(arma::mat X_f, arma::mat tau, arma::mat w_f, arma::vec gamma, double rho);
+RcppExport SEXP _zap_rgmoe_cpp_Fs(SEXP X_fSEXP, SEXP tauSEXP, SEXP w_fSEXP, SEXP gammaSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_Fs(X_f, tau, w_f, gamma, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_pi_matrix
+arma::mat cpp_pi_matrix(arma::mat X_f, arma::mat w_f);
+RcppExport SEXP _zap_rgmoe_cpp_pi_matrix(SEXP X_fSEXP, SEXP w_fSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type X_f(X_fSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type w_f(w_fSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_pi_matrix(X_f, w_f));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_soth
+double cpp_soth(double x, double lambda);
+RcppExport SEXP _zap_rgmoe_cpp_soth(SEXP xSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_soth(x, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_zap_rgmoe_cpp_D_masked", (DL_FUNC) &_zap_rgmoe_cpp_D_masked, 4},
-    {"_zap_rgmoe_cpp_D_unmasked", (DL_FUNC) &_zap_rgmoe_cpp_D_unmasked, 4},
-    {"_zap_rgmoe_cpp_pi_matrix", (DL_FUNC) &_zap_rgmoe_cpp_pi_matrix, 2},
+    {"_zap_rgmoe_cpp_masked_moments", (DL_FUNC) &_zap_rgmoe_cpp_masked_moments, 4},
+    {"_zap_rgmoe_cpp_unmasked_moments", (DL_FUNC) &_zap_rgmoe_cpp_unmasked_moments, 4},
     {"_zap_rgmoe_cpp_EM_Estep", (DL_FUNC) &_zap_rgmoe_cpp_EM_Estep, 6},
+    {"_zap_rgmoe_cpp_beta_update", (DL_FUNC) &_zap_rgmoe_cpp_beta_update, 7},
+    {"_zap_rgmoe_cpp_beta_CoorLQk", (DL_FUNC) &_zap_rgmoe_cpp_beta_CoorLQk, 7},
+    {"_zap_rgmoe_cpp_obj_expert", (DL_FUNC) &_zap_rgmoe_cpp_obj_expert, 7},
+    {"_zap_rgmoe_cpp_sigma2_update", (DL_FUNC) &_zap_rgmoe_cpp_sigma2_update, 5},
+    {"_zap_rgmoe_cpp_CoorGateP", (DL_FUNC) &_zap_rgmoe_cpp_CoorGateP, 5},
+    {"_zap_rgmoe_cpp_CoorGateP1", (DL_FUNC) &_zap_rgmoe_cpp_CoorGateP1, 5},
+    {"_zap_rgmoe_cpp_CoorLQk", (DL_FUNC) &_zap_rgmoe_cpp_CoorLQk, 6},
+    {"_zap_rgmoe_cpp_obj_gating", (DL_FUNC) &_zap_rgmoe_cpp_obj_gating, 6},
+    {"_zap_rgmoe_cpp_Fs", (DL_FUNC) &_zap_rgmoe_cpp_Fs, 5},
+    {"_zap_rgmoe_cpp_pi_matrix", (DL_FUNC) &_zap_rgmoe_cpp_pi_matrix, 2},
+    {"_zap_rgmoe_cpp_soth", (DL_FUNC) &_zap_rgmoe_cpp_soth, 2},
     {NULL, NULL, 0}
 };
 

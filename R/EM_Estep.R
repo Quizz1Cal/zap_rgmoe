@@ -10,14 +10,14 @@ EM_Estep <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2) {
     D0 <- matrix(NA, nrow=n, ncol=K)
     D1 <- matrix(NA, nrow=n, ncol=K)
     D2 <- matrix(NA, nrow=n, ncol=K)
-    pis <- compute_pi(X, w0, w)
+    pis <- pi_matrix(X, w0, w)
     for (i in 1:n) {
         xi <- matrix(X[i,], nrow=1)
         if (is_masked[i]) {
-            out <- compute_masked_E_estimates(Zs[i,], xi,
+            out <- masked_moments(Zs[i,], xi,
                                               pis[i,], beta0, beta, sigma2)
         } else {
-            out <- compute_unmasked_E_estimates(Zs[i,1], xi,
+            out <- unmasked_moments(Zs[i,1], xi,
                                                 pis[i,], beta0, beta, sigma2)
         }
         D0[i,] <- out$D0
@@ -29,7 +29,7 @@ EM_Estep <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2) {
 }
 
 # Works on SINGLE INSTANCES
-compute_masked_E_estimates <- function(zs, x, pi, beta0, beta, sigma2) {
+masked_moments <- function(zs, x, pi, beta0, beta, sigma2) {
     dmeans <- beta0 + x%*%beta
     # I was adding 1e-10 + before.
     dnorms <- 1e-12 + t(rbind(stats::dnorm(zs[1], dmeans, sqrt(sigma2)),
@@ -51,7 +51,7 @@ compute_masked_E_estimates <- function(zs, x, pi, beta0, beta, sigma2) {
 }
 
 # Works on SINGLE INSTANCES
-compute_unmasked_E_estimates <- function(z, x, pi, beta0, beta, sigma2) {
+unmasked_moments <- function(z, x, pi, beta0, beta, sigma2) {
     dmeans <- beta0 + x%*%beta
     dnorms <- stats::dnorm(z, dmeans, sqrt(sigma2)) # [k]
     products <- dnorms * pi
@@ -62,7 +62,7 @@ compute_unmasked_E_estimates <- function(z, x, pi, beta0, beta, sigma2) {
 }
 
 # Works on ALL INSTANCES
-compute_pi <- function(X, w0, w, verbose=FALSE) {
+pi_matrix <- function(X, w0, w, verbose=FALSE) {
     n <- dim(X)[1]
     X.full <- cbind(rep(1,n), X)
     exp_weights <- exp(X.full%*%rbind(w0,w))  # [i=1:n, k=1:K-1]

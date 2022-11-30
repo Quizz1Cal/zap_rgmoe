@@ -108,7 +108,7 @@ q_estimates <- function(Z.pairs, X, params) {
 
     # First, compute densities
     n <- dim(X)[1]
-    pis <- compute_pi(X, w0, w)
+    pis <- pi_matrix(X, w0, w)
     mu <- cbind(rep(1,n), X) %*% rbind(beta0, beta)
 
     dZ <- c()

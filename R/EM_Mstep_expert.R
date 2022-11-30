@@ -1,6 +1,4 @@
-compute_beta_update <- function(X, D, beta0, beta, sigma2, lambda) {
-    n = dim(X)[1]
-    p = dim(X)[2]
+beta_update <- function(X, D, beta0, beta, sigma2, lambda) {
     K = length(beta0)
 
     D0 <- D$D0
@@ -22,38 +20,39 @@ compute_beta_update <- function(X, D, beta0, beta, sigma2, lambda) {
     return(list(beta0=beta0, beta=beta))
 }
 
-beta_CoorLQk <- function(X, D0, D1, D2, beta0_k, beta_k, sigma2_k, lambda_k) {
+beta_CoorLQk <- function(X, D0k, D1k, D2k, beta0_k, beta_k, sigma2_k, lambda_k) {
     # Inspired by CoorLQk. Note that they are all k-specific.
     eps = 1e-6
     p = dim(X)[2]
-    cur_val = obj_expert(X, D0, D1, D2, beta0_k, beta_k, sigma2_k, lambda_k)
+    cur_val = obj_expert(X, D0k, D1k, D2k, beta0_k, beta_k, sigma2_k, lambda_k)
 
     repeat {
         prev_val = cur_val
         for(j in 1:p) {
-            rj <- D1 - D0*(X[,-j]%*%as.matrix(beta_k[-j])+as.vector(beta0_k))
+            rj <- D1k - D0k*(X[,-j]%*%as.matrix(beta_k[-j])+as.vector(beta0_k))
             # rj <- replace_na(rj)
-            denom <- D0 %*% (X[,j]^2)
+            denom <- D0k %*% (X[,j]^2)
             beta_k[j] <- SoTh(X[,j] %*% rj, sigma2_k*lambda_k) / denom
-            beta0_k <- (sum(D1) -(D0%*%X)%*%beta_k) / sum(D0)
+            beta0_k <- (sum(D1k) -(D0k%*%X)%*%beta_k) / sum(D0k)
         }
-        cur_val = obj_expert(X, D0, D1, D2, beta0_k, beta_k, sigma2_k, lambda_k)
+        cur_val = obj_expert(X, D0k, D1k, D2k, beta0_k, beta_k, sigma2_k, lambda_k)
         if ((prev_val - cur_val) < eps) break
     }
     return(list(beta0_k=beta0_k, beta_k=beta_k))
 }
 
-obj_expert <- function(X, D0, D1, D2, beta0_k, beta_k, sigma2_k, lambda_k) {
+obj_expert <- function(X, D0k, D1k, D2k, beta0_k, beta_k,
+                                    sigma2_k, lambda_k) {
     # All k-specific
     # Objective to maximise w.r.t. beta (dropping irrelevant terms)
     y_preds <- X%*%beta_k+c(beta0_k)  # WARNING: Adding constant.
-    S0 <- (sum(D2) -2*D1%*%y_preds +sum(D0*(y_preds)^2)) / 2
+    S0 <- (sum(D2k) -2*D1k%*%y_preds +sum(D0k*(y_preds)^2)) / 2
     S1 <- sigma2_k*lambda_k*sum(abs(beta_k))
     return(S0+S1)
 }
 
 # TO TEST/CHECK
-compute_sigma2_update <- function(X, D, beta0, beta) {
+sigma2_update <- function(X, D, beta0, beta) {
     sigma2 <- c()
     D0 <- D$D0
     D1 <- D$D1

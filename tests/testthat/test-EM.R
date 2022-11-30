@@ -1,31 +1,33 @@
 test_that("Pi won't return negative in extreme cases", {
     test_case <- readRDS(test_path("fixtures", "negative_pi.RData"))
-    pi <- compute_pi(test_case$X, test_case$w0, test_case$w)
+    pi <- pi_matrix(test_case$X, test_case$w0, test_case$w)
     expect_true(all(pi >= 0))
 })
 
 test_that("Masked D-estimates can handle small eps-small dnorm", {
     test_case <- readRDS(test_path("fixtures", "zero_dnorm_D.RData"))
-    D <- compute_masked_E_estimates(test_case$zs, test_case$x, test_case$pi,
+    D <- masked_moments(test_case$zs, test_case$x, test_case$pi,
                                     test_case$beta0, test_case$beta,
                                     test_case$sigma2)
     expect_false(any(is.na(D$D0)) | any(is.na(D$D1)) | any(is.na(D$D2)))
 })
 
 test_that("Degenerate 3rd expert (and NaN production) at 1e-5 tol near conv.", {
-    if (T) {
+    if (F) {
         data <- withr::with_seed(5, make_test_EM_iteration_instance(n=2500, mask_prop=0.3))
         out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
                                    params_init=data, hyp_params=data,
                                    gating_option=FALSE,
                                    verbose=TRUE, maxit=500, tol=1e-4))
+    } else {
+        expect_equal("DID NOT", "EXECUTE TEST")
     }
 })
 
 test_that("Degenerate sigma2 estimates", {
     # Specifically, beta is 0 for k=3, pushing variance to 0.
     test_case <- readRDS(test_path("fixtures", "degenerate_sigma2.RData"))
-    sigma2_new <- compute_sigma2_update(test_case$X, test_case$D,
+    sigma2_new <- sigma2_update(test_case$X, test_case$D,
                           test_case$beta0, test_case$beta)
     expect_false(any(sigma2_new < 1e-7))
 })

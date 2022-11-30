@@ -1,5 +1,4 @@
-make_zap_simulated_dataset <- function(setup=1, n=5000, sigma=1,
-                                       eta, zeta, eps) {
+make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000) {
     # Generates ZAP's simulated data sets used in functional evaluation
     # Setup must be 1,2 or 3
     stopifnot(setup %in% 1:3)
@@ -59,37 +58,48 @@ make_zap_simulated_dataset <- function(setup=1, n=5000, sigma=1,
                 mu.r=mu.r, mu.l=mu.l))
 }
 
-make_all_simulation_study_dataset_instances <- function(n=5000, nreps=150, sigma=1) {
+# Generate required simulated datasets
+make_all_simulation_study_dataset_instances <- function(file_dir, n=5000,
+                                                        n_reps=150) {
+    stopifnot(file.exists(file_dir))
     # Hyperparameters
+    sigma2 <- 1
+    epsilons <- matrix(rep(seq(1.3,2.1,by=0.2), 3), nrow=3, byrow=TRUE) # effect size
     zetas <- matrix(c(0,0.5,1,
                       0,0.7,1,
-                      0,1.5,3), nrow=3, byrow=TRUE)
-    epsilons <- matrix(rep(seq(1.3,2.1,by=0.2), 3), nrow=3, byrow=TRUE)
-    etas <- c(-2, -2.5, -2)
+                      0,1.5,3), nrow=3, byrow=TRUE)  # informativeness
+    etas <- c(-2, -2.5, -2)  # fixed per setup
 
-    # data[setup, eps, zeta]
-    all_data <- list()
-    for (s in 1:3) {
-        all_data[[s]] <- list()
-        for (e in 1:5) {
-            all_data[[s]][[e]] <- list()
-            for (z in 1:3) {
-                all_data[[s]][[e]][[z]] <- list()
-                # Helper variables
+    n_setup <- 3
+    n_eps <- dim(epsilons)[2]
+    n_zetas <- dim(zetas)[2]
+
+
+    # data[setup, eps, zeta, rep]
+    c <- 1
+    for (s in 1:n_setup) { # which setup (and hence eta)
+        for (e in 1:n_eps) { # which epsilon of that setup
+            for (z in 1:n_zetas) {  # which zeta of that setup
                 eta <- etas[s]
                 zeta <- zetas[s, z]
                 eps <- epsilons[s, e]
+                print(sprintf("Processing %d / %d", c, n_setup*n_eps*n_zetas))
+                c <- c + 1
 
-                for (r in 1:nreps) {
+                for (r in 1:n_reps) {
                     # Generate and cache data
                     data <- make_zap_simulated_dataset(
-                        setup=s, n=n, sigma=sigma, eta=eta,zeta=zeta,eps=eps)
-                    all_data[[s]][[e]][[z]][[r]] <- data
+                        setup=s, n=n, sigma=sqrt(sigma2), eta=eta, zeta=zeta, eps=eps
+                    )
+
+                    # Save data
+                    filename <- sprintf("zap_sim_setup_%d_eps_%1.1f_zeta_%1.1f_r_%03d.rds",
+                                        s, eps, zeta, r)
+                    saveRDS(data, file.path(file_dir, filename))
                 }
             }
         }
     }
-    return(all_data)
 }
 
 ############################ TESTING
