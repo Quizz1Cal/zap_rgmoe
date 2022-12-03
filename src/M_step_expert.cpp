@@ -7,7 +7,7 @@ arma::mat cpp_beta_update(arma::mat X_f, arma::mat D0, arma::mat D1,
     int K = beta_f.n_cols;
 
     for (int k=0; k < K; k++) {
-        arma::vec out = cpp_beta_CoorLQk(X_f, D0.col(k), D1.col(k),
+        arma::vec out = cpp_beta_marginal_CD(X_f, D0.col(k), D1.col(k),
                                          D2.col(k), beta_f.col(k),
                                          sigma2[k], lambda[k]);
         beta_f.col(k) = out;
@@ -16,7 +16,7 @@ arma::mat cpp_beta_update(arma::mat X_f, arma::mat D0, arma::mat D1,
 }
 
 //[[Rcpp::export]]
-arma::vec cpp_beta_CoorLQk(arma::mat X_f, arma::vec D0k,
+arma::vec cpp_beta_marginal_CD(arma::mat X_f, arma::vec D0k,
                            arma::vec D1k, arma::vec D2k,
                            arma::vec betak_f,
                            double sigma2k, double lambdak) {

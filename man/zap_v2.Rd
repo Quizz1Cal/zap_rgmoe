@@ -15,9 +15,9 @@ zap_v2(
   maxit = 10,
   tol = 1e-04,
   nfits = 100,
-  EM_gating_option = F,
-  zap_verbose = T,
-  EM_verbose = F
+  use_proximal_newton = FALSE,
+  zap_verbose = TRUE,
+  EM_verbose = FALSE
 )
 }
 \arguments{
@@ -33,7 +33,7 @@ zap_v2(
 
 \item{nfits}{maximum number of EM updates during the procedure... DEFAULT?}
 
-\item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
+\item{use_proximal_newton}{If TRUE, uses Proximal Newton Method; else Proximal Newton-type.}
 }
 \value{
 Vector of indices for samples to reject

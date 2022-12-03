@@ -17,8 +17,8 @@ cpp_beta_update <- function(X_f, D0, D1, D2, beta_f, sigma2, lambda) {
     .Call(`_zap_rgmoe_cpp_beta_update`, X_f, D0, D1, D2, beta_f, sigma2, lambda)
 }
 
-cpp_beta_CoorLQk <- function(X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak) {
-    .Call(`_zap_rgmoe_cpp_beta_CoorLQk`, X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak)
+cpp_beta_marginal_CD <- function(X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak) {
+    .Call(`_zap_rgmoe_cpp_beta_marginal_CD`, X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak)
 }
 
 cpp_obj_expert <- function(X_f, D0k, D1k, D2k, betak_f, sigma2k, lambdak) {
@@ -29,24 +29,20 @@ cpp_sigma2_update <- function(X_f, D0, D1, D2, beta_f) {
     .Call(`_zap_rgmoe_cpp_sigma2_update`, X_f, D0, D1, D2, beta_f)
 }
 
-cpp_CoorGateP <- function(X_f, w_f, tau, gamma, rho) {
-    .Call(`_zap_rgmoe_cpp_CoorGateP`, X_f, w_f, tau, gamma, rho)
+cpp_gating_update <- function(X_f, tau, w_f, gamma, use_proximal_newton = FALSE) {
+    .Call(`_zap_rgmoe_cpp_gating_update`, X_f, tau, w_f, gamma, use_proximal_newton)
 }
 
-cpp_CoorGateP1 <- function(X_f, w_f, tau, gamma, rho) {
-    .Call(`_zap_rgmoe_cpp_CoorGateP1`, X_f, w_f, tau, gamma, rho)
+cpp_weight_marginal_CD <- function(Y, X_f, tau, wk_f, gammak) {
+    .Call(`_zap_rgmoe_cpp_weight_marginal_CD`, Y, X_f, tau, wk_f, gammak)
 }
 
-cpp_CoorLQk <- function(X_f, Y, tau, wk_f, gammak, rho) {
-    .Call(`_zap_rgmoe_cpp_CoorLQk`, X_f, Y, tau, wk_f, gammak, rho)
+cpp_obj_gating <- function(Y, X_f, tau, wk_f, gammak) {
+    .Call(`_zap_rgmoe_cpp_obj_gating`, Y, X_f, tau, wk_f, gammak)
 }
 
-cpp_obj_gating <- function(tau, X_f, Y, wk_f, gammak, rho) {
-    .Call(`_zap_rgmoe_cpp_obj_gating`, tau, X_f, Y, wk_f, gammak, rho)
-}
-
-cpp_Fs <- function(X_f, tau, w_f, gamma, rho) {
-    .Call(`_zap_rgmoe_cpp_Fs`, X_f, tau, w_f, gamma, rho)
+cpp_Fs <- function(X_f, tau, w_f, gamma) {
+    .Call(`_zap_rgmoe_cpp_Fs`, X_f, tau, w_f, gamma)
 }
 
 cpp_pi_matrix <- function(X_f, w_f) {

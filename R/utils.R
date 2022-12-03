@@ -42,6 +42,11 @@ scale_by <- function(Z, mean, sd) {
     return((Z - mean) / sd)
 }
 
+# Temporary helper function
+make_X_f <- function(X) {
+    return(cbind(rep(1, dim(X)[1]), X))
+}
+
 # Sourced from HDME-master.
 # TODO: Cite.
 # TODO: improve so it works on any-shape X.

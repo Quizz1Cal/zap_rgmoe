@@ -106,15 +106,13 @@ make_all_simulation_study_dataset_instances <- function(file_dir, n=5000,
 ############################ TESTING
 
 make_test_EM_parameter_instance <- function(p, K) {
-    w0=rnorm(K-1)
-    w=matrix(rnorm(p*(K-1)), nrow=p, ncol=K-1)
-    beta0 = rnorm(K,sd=4)
-    beta <- matrix(rnorm(p*K,sd=2), nrow=p, ncol=K)
+    w_f <- matrix(rnorm((p+1)*(K-1)), nrow=p+1, ncol=K-1)
+    beta_f <- matrix(rnorm((p+1)*K, sd=2), nrow=p+1, ncol=K)
     sigma2 <- rep(0.6:2.4, K)[1:K]  # rep(1:3, K)[1:K]
     gamma <- rep(0.12, K-1)
     lambda <- rep(0.17, K)
-    return(list(K=K, w0=w0, w=w, beta0=beta0, beta=beta,
-                sigma2=sigma2, gamma=gamma, lambda=lambda))
+    return(list(K=K, w_f=w_f, beta_f=beta_f, sigma2=sigma2,
+                gamma=gamma, lambda=lambda))
 }
 
 make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
@@ -123,6 +121,7 @@ make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
                                                     eta=eta, zeta=zeta, eps=eps)
     Z <- problem_instance$Z
     X <- problem_instance$X
+    X_f=make_X_f(X)
 
     Z.m <- mask_Z(Z)
     Zs <- cbind(Z, Z.m)
@@ -133,7 +132,7 @@ make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
                         replace=FALSE)
 
     iter_params <- make_test_EM_parameter_instance(p=p, K=3)
-    iter_params$X <- X
+    iter_params$X_f <- X_f
     iter_params$n <- n
     iter_params$p <- p
     iter_params$Zs <- Zs

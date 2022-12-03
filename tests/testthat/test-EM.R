@@ -1,59 +1,48 @@
 test_that("Masked D-estimates can handle small eps-small dnorm", {
     test_case <- readRDS(test_path("fixtures", "zero_dnorm_D.RData"))
-    D <- masked_moments(test_case$zs, test_case$x, test_case$pi,
-                        test_case$beta0, test_case$beta,
-                        test_case$sigma2)
+    mu <- test_case$x %*% test_case$beta + test_case$beta0
+    D <- masked_moments(test_case$zs, test_case$pi, mu, sqrt(test_case$sigma2))
     expect_false(any(is.na(D$D0)) | any(is.na(D$D1)) | any(is.na(D$D2)))
-    D_cpp <- masked_moments(test_case$zs, test_case$x, test_case$pi,
-                        test_case$beta0, test_case$beta,
-                        test_case$sigma2)
-    expect_false(any(is.na(D_cpp$D0)) | any(is.na(D_cpp$D1)) |
-                     any(is.na(D_cpp$D2)))
+    D_cpp <- masked_moments(test_case$zs, test_case$pi, mu, sqrt(test_case$sigma2))
+    expect_false(any(is.na(D_cpp$D0)) | any(is.na(D_cpp$D1)) | any(is.na(D_cpp$D2)))
 })
 
-test_that("Both coorLQk objectives agree on equal-variance, unmasked data", {
+test_that("Both marginal_CD objectives agree on equal-variance, unmasked data", {
     data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
     data$sigma2 <- rep(data$sigma2[1], data$K)
     k <- 2
 
-    D <- EM_Estep(data$Zs, data$is_masked, data$X,
-                  data$w0, data$w, data$beta0, data$beta, data$sigma2)
+    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+                  data$sigma2)
 
-
-    cust_obj <- obj_expert(data$X, D$D0[,k], D$D1[,k], D$D2[,k],
-                           data$beta0[k], data$beta[,k], data$sigma2[k],
-                           data$lambda[k])
-    orig_obj <- obj_gating(D$D0[,k], data$X, data$Zs[,1], data$beta0[k],
-                           data$beta[,k],
-                           gammak = data$sigma[k] * data$lambda[k], rho=0)
+    cust_obj <- obj_expert(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
+                           data$beta_f[,k], data$sigma2[k], data$lambda[k])
+    orig_obj <- obj_gating(data$Zs[,1], data$X_f, D$D0[,k], data$beta_f[,k],
+                           gammak = data$sigma[k] * data$lambda[k])
     expect_equal(cust_obj, orig_obj)
 })
 
-test_that("Both CoorLQk functions agree on equal-variance, unmasked data", {
+test_that("Both marginal_CD functions agree on equal-variance, unmasked data", {
     data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
     data$sigma2 <- rep(data$sigma2[1], data$K)
     k <- 2
 
-    D <- EM_Estep(data$Zs, data$is_masked, data$X,
-                  data$w0, data$w, data$beta0, data$beta, data$sigma2)
+    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+                  data$sigma2)
 
-    custom_out_lst <- beta_CoorLQk(data$X, D$D0[,k], D$D1[,k], D$D2[,k],
-                                   data$beta0[k], data$beta[,k], data$sigma2[k],
-                                   data$lambda[k])
-    custom_out <- c(custom_out_lst$beta0, custom_out_lst$beta_k)
-    orig_out <- CoorLQk(data$X, data$Zs[,1], D$D0[,k], data$beta0[k],
-                        data$beta[,k], gammak = data$sigma[k] * data$lambda[k], rho=0)
+    custom_out <- beta_marginal_CD(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
+                                       data$beta_f[,k], data$sigma2[k],
+                                       data$lambda[k])
+    orig_out <- weight_marginal_CD(data$Zs[,1], data$X_f, D$D0[,k], data$beta_f[,k],
+                                   gammak = data$sigma[k] * data$lambda[k])
 
     # HDME for comparison
     if (F) {
         withr::local_package("RMoE")
-        betak_hdme <- rbind(data$beta0, data$beta)
-        X_hdme <- cbind(rep(1,data$n), data$X)
-        wk_hdme <- cbind(data$w0, t(data$w))
-        tau_hdme <- RMoE:::Ge.step(betak_hdme, wk_hdme, data$sigma2[1],
-                                   data$Zs[,1], X_hdme, data$K)
-        update_hdme <- RMoE:::CoorLQk(X_hdme, data$Zs[,1], tau_hdme[,k],
-                                      betak_hdme[,k], data$lambda[k], rho=0)
+        tau_hdme <- RMoE:::Ge.step(data$beta_f, t(data$w_f), data$sigma2[1],
+                                   data$Zs[,1], data$X_f, data$K)
+        update_hdme <- RMoE:::CoorLQk(data$X_f, data$Zs[,1], tau_hdme[,k],
+                                      data$beta_f[,k], data$lambda[k], rho=0)
         expect_equal(custom_out, update_hdme, tolerance=1e-4)
     }
 
@@ -67,9 +56,9 @@ if (F) {
         # A: Well, the pis are small!!
         # Q: Well, does this behaviour vary by initialisation? Dataset?
         data <- withr::with_seed(5, make_test_EM_iteration_instance(n=2500, mask_prop=0.3))
-        out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X,
+        out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X_f,
                                           params_init=data, hyp_params=data,
-                                          gating_option=FALSE,
+                                          use_proximal_newton=TRUE,
                                           verbose=FALSE, maxit=500, tol=1e-4))
     })
 
@@ -80,13 +69,12 @@ if (F) {
         data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
 
         # ZAP2
-        D <- EM_Estep(data$Zs, data$is_masked, data$X,
-                      data$w0, data$w, data$beta0, data$beta, data$sigma2)
-        M1 <- CoorGateP(data$X, data$w0, data$w, D$D0, data$gamma, rho=0)
-        M2 <- CoorGateP1(data$X, data$w0, data$w, D$D0, data$gamma, rho=0)
+        D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+                      data$sigma2)
+        M1 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=TRUE)
+        M2 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=FALSE)
 
-        expect_equal(M1$w0, M2$w0, tolerance=1e-3)
-        expect_equal(M1$w, M2$w, tolerance=1e-3)
+        expect_equal(M1, M2, tolerance=1e-3)
     })
 
     test_that("M-step (Gating) Methods 1, 2 agree with masking", {
@@ -94,12 +82,11 @@ if (F) {
         data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0.3))
 
         # ZAP2
-        D <- EM_Estep(data$Zs, data$is_masked, data$X,
-                      data$w0, data$w, data$beta0, data$beta, data$sigma2)
-        M1 <- CoorGateP(data$X, data$w0, data$w, D$D0, data$gamma, rho=0)
-        M2 <- CoorGateP1(data$X, data$w0, data$w, D$D0, data$gamma, rho=0)
+        D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+                      data$sigma2)
+        M1 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=TRUE)
+        M2 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=FALSE)
 
-        expect_equal(M1$w0, M2$w0, tolerance=1e-3)
-        expect_equal(M1$w, M2$w, tolerance=1e-3)
+        expect_equal(M1, m2, tolerance=1e-3)
     })
 }

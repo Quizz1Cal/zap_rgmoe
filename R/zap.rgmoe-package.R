@@ -5,3 +5,4 @@
 NULL
 
 Sys.setenv('TESTTHAT_MAX_FAILS' = Inf)
+options(warn=1)

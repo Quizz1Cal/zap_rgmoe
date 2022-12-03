@@ -6,7 +6,7 @@
 #' @param maxit maximum number of iterations for every EM update
 #' @param nfits maximum number of EM updates during the procedure... DEFAULT?
 #' @param alpha_m Hyperparameter for non-interactive threshold
-#' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
+#' @param use_proximal_newton If TRUE, uses Proximal Newton Method; else Proximal Newton-type.
 #'
 #' @return Vector of indices for samples to reject
 #' @export
@@ -15,20 +15,21 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
                    tol=1e-4,
                    nfits=100,
                    # model_select=F,
-                   EM_gating_option=FALSE,
+                   use_proximal_newton=FALSE,
                    zap_verbose=TRUE, EM_verbose=FALSE) {
     stopifnot(alpha > 0, length(Z) > 0, dim(X)[1] == length(Z))
 
-    Z.pairs <- cbind(Z, mask_Z(Z)) # Masking pairs
     n <- length(Z)
     p <- dim(X)[2]
+
+    Z_pairs <- cbind(Z, mask_Z(Z)) # Masking pairs
+    X_f <- cbind(rep(1,n), X)
+
     masked_set <- 1:n # masked data index set
 
     # Specific params, hyperparams for model
-    model_params <- list(w0=rep(0, K-1),
-                         w=matrix(0, nrow=p, ncol=K-1),
-                         beta0=rep(0, K),
-                         beta=matrix(0, nrow=p, ncol=K),
+    model_params <- list(w_f=matrix(0, nrow=p+1, ncol=K-1),
+                         beta_f=matrix(0, nrow=p+1, ncol=K),
                          sigma2=stats::runif(K, min=1, max=5))
     hyp_params <- list(K=K, p=p, lambda=lambda, gamma=gamma)
 
@@ -43,12 +44,12 @@ zap_v2 <- function(Z, X, alpha=0.05, alpha_m=0.2, K, lambda, gamma,
         if (FDP_t > alpha) {
             # unmask pair with best q (which in turn, will update sl, sr)
             is_masked <- 1:n %in% masked_set
-            model_params <- EM_run(Z.pairs, is_masked, X,
+            model_params <- EM_run(Z_pairs, is_masked, X_f,
                                    params_init=model_params,
                                    hyp_params=hyp_params,
-                                   gating_option=EM_gating_option,
+                                   use_proximal_newton=use_proximal_newton,
                                    verbose=EM_verbose)
-            q_est <- q_estimates(Z.pairs, X, model_params)
+            q_est <- q_estimates(Z_pairs, X_f, model_params)
             masked_set <- update_masked_set(masked_set, q_est)
         } else {
             rejections <- select_rejections(Z, sl, sr)
@@ -99,31 +100,23 @@ mask_Z <- function(Z) {
 # Computes qhat_t (a vector of q-estimates for each i, at ZAP iteration t)
 # At each t, should reject i with maximum q_estimate
 # TODO: I was scaling before. Now I am not. Confirm, 100%, Z is assumed scaled/dealt with.
-q_estimates <- function(Z.pairs, X, params) {
-    w0 <- params$w0
-    w <- params$w
-    beta0 <- params$beta0
-    beta <- params$beta
+q_estimates <- function(Z_pairs, X_f, params) {
+    w_f <- params$w_f
+    beta_f <- params$beta_f
     sigma2 <- params$sigma2
 
-    # First, compute densities
     n <- dim(X)[1]
-    pis <- pi_matrix(X, w0, w)
-    mu <- cbind(rep(1,n), X) %*% rbind(beta0, beta)
+    pis <- pi_matrix(X_f, w_f)
+    mu <- X_f %*% beta_f
 
     dZ <- c()
     dmaskZ <- c()
     for (i in 1:n) {
-        dZ[i] <- sum(pis[i,] * stats::dnorm(Z.pairs[i,1], mu[i,], sqrt(sigma2)))
-        dmaskZ[i] <- sum(pis[i,] * stats::dnorm(Z.pairs[i,2], mu[i,], sqrt(sigma2)))
+        dZ[i] <- sum(pis[i,] * stats::dnorm(Z_pairs[i,1], mu[i,], sqrt(sigma2)))
+        dmaskZ[i] <- sum(pis[i,] * stats::dnorm(Z_pairs[i,2], mu[i,], sqrt(sigma2)))
     }
 
     output <- dZ / (dZ + dmaskZ)
-    #for (i in 1:length(Z)) {
-    #    print(sprintf("Z(%.2f)/(%.2f) dZ(%.3f)/(%.3f) props (%.2f)(%.2f)(%.2f)",
-    #                  Zs[i], Z.ms[i], dZ[i], dmaskZ[i], props[i,1], props[i,2], props[i,3]))
-    #}
-    # output[which(is.na(output))] <- 0
     return(output)
 }
 

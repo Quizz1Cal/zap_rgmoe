@@ -1,16 +1,12 @@
 # Log likelihood
 # TODO: TEST
-loglik <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda) {
-    n = dim(X)[1]
-    p = dim(X)[2]
-    K = length(beta0)
+loglik <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2, gamma, lambda) {
+    n = dim(X_f)[1]
+    p = dim(X_f)[2] - 1
+    K = dim(beta_f)
 
-    # Adjust for vector beta, vector w
-    beta = matrix(beta,nrow=p)
-    w = matrix(w,nrow=p)
-
-    pis <- pi_matrix(X, w0, w)
-    mu <- cbind(rep(1,n), X) %*% rbind(beta0, beta)
+    pis <- pi_matrix(X_f, w_f)
+    mu <- X_f %*% beta_f
     dnorms <- matrix(NA, nrow=n, ncol=K)
     for (i in 1:n) {
         if (is_masked[i]) {
@@ -23,7 +19,8 @@ loglik <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda) 
     mixture_densities <- rowSums(pis * dnorms)
 
     LL = sum(log(mixture_densities))
-    expert_pen = sum(lambda*colSums(abs(beta)))
-    gating_pen = sum(gamma*colSums(abs(w)))
+    # penalties on coefficient components of beta, w
+    expert_pen = sum(lambda*colSums(abs(beta_f[-1,])))
+    gating_pen = sum(gamma*colSums(abs(w_f[-1,])))
     return(LL - gating_pen - expert_pen)
 }

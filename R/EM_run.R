@@ -1,21 +1,20 @@
 #' Title
 #'
-#' @param params_init list of initial values for parameters (w0, w, beta0, beta, sigma2)
+#' @param params_init list of initial values for parameters (w_f, beta_f, sigma2)
 #' @param hyp_params list of fixed hyperparameter values (K, p, lambda, gamma)
-#' @param gating_option If TRUE, uses Proximal Newton-type Method; else Proximal Newton.
+#' @param use_proximal_newton If TRUE, uses Proximal Newton Method; else Proximal Newton-type.
 #'
-#' @return list of parameter estimates (w0, w, beta0, beta, sigma2)
-EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
-                   tol=1e-4, use_cpp=FALSE, gating_option=FALSE, verbose=FALSE) {
+#' @return list of parameter estimates (w_f, beta_f, sigma2)
+EM_run <- function(Zs, is_masked, X_f, params_init, hyp_params, maxit=200,
+                   tol=1e-4, use_cpp=FALSE, use_proximal_newton=FALSE, verbose=FALSE) {
 
-    stop_if_inconsistent_dims(Zs, is_masked, X, params_init, hyp_params)
+    stop_if_inconsistent_dims(Zs, is_masked, X_f, params_init, hyp_params)
 
     # squarem takes vector arguments
     # note matrices are converted COL-BY-COL (e.g. [1 3; 2 4] -> 1,2,3,4)
-    par_vec <- c(params_init$w0, params_init$w, params_init$beta0,
-                 params_init$beta, params_init$sigma2)
+    par_vec <- c(params_init$w_f, params_init$beta_f, params_init$sigma2)
 
-    dataset <- list(Zs=Zs, is_masked=is_masked, X=X)
+    dataset <- list(Zs=Zs, is_masked=is_masked, X_f=X_f)
 
     # TODO: switch to squarem once debugged
     res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
@@ -23,7 +22,8 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
                                dataset=dataset,
                                hyp_params=hyp_params,
                                use_cpp=use_cpp,
-                               gating_option=gating_option, verbose=verbose,
+                               use_proximal_newton=use_proximal_newton,
+                               verbose=verbose,
                                control=list(tol=tol, maxiter=maxit))
     if (verbose) {
         success_str <- if (res$convergence) {
@@ -35,69 +35,55 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
     return(params_vec_to_list(res$par, hyp_params))
 }
 
-# Converting between c() concatenation, and named lists
+# Converting between c() concatenation for SQUAREM, and named lists
 params_vec_to_list <- function(params_vec, hyp_params) {
     K <- hyp_params$K
     p <- hyp_params$p
-    sizes <- c(K-1, p*(K-1), K, K*p, K)
-    offsets <- c(0,cumsum(sizes))
-    stopifnot(length(params_vec) == sum(sizes))
 
-    w0 <- params_vec[offsets[1] + 1:sizes[1]]
-    w <- matrix(params_vec[offsets[2] + 1:sizes[2]],
-                nrow=p)
-    beta0 <- params_vec[offsets[3] + 1:sizes[3]]
-    beta <- matrix(params_vec[offsets[4] + 1:sizes[4]],
-                nrow=p)
-    sigma2 <- params_vec[offsets[5] + 1:sizes[5]]
-    return(list(w0=w0,w=w,beta0=beta0,beta=beta,sigma2=sigma2))
+    size_w_f = (p+1) * (K-1)
+    size_beta_f = (p+1) * K
+    stopifnot(length(params_vec) == size_w_f + size_beta_f + K)
+
+    w_f <- matrix(params_vec[1:size_w_f], nrow=p+1, byrow=F)
+    beta_f <- matrix(params_vec[size_w_f + 1:size_beta_f], nrow=p+1, byrow=F)
+    sigma2 <- params_vec[size_w_f + size_beta_f + 1:K]
+    return(list(w_f=w_f, beta_f=beta_f, sigma2=sigma2))
 }
 
 EM_objfn <- function(params_vec, hyp_params, dataset, use_cpp,
-                            gating_option, verbose) {
+                     use_proximal_newton, verbose) {
     params <- params_vec_to_list(params_vec, hyp_params)
 
-    return(loglik(dataset$Zs, dataset$is_masked, dataset$X,
-                  params$w0, params$w, params$beta0, params$beta, params$sigma2,
+    return(loglik(dataset$Zs, dataset$is_masked, dataset$X_f,
+                  params$w_f, params$beta_f, params$sigma2,
                   hyp_params$gamma, hyp_params$lambda))
 }
 
-# Temporary helper function
-make_X_f <- function(X) {
-    return(cbind(rep(1, dim(X)[1]), X))
-}
-
 EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
-                           gating_option, verbose) {
+                           use_proximal_newton, verbose) {
     params <- params_vec_to_list(params_vec, hyp_params)
-    w0 <- params$w0
-    w <- params$w
-    beta0 <- params$beta0
-    beta <- params$beta
+    w_f <- params$w_f
+    beta_f <- params$beta_f
     sigma2 <- params$sigma2
     lambda <- hyp_params$lambda
     gamma <- hyp_params$gamma
     Zs <- dataset$Zs
     is_masked <- dataset$is_masked
-    X <- dataset$X
+    X_f <- dataset$X_f
 
 
     # Compute E-step estimates
     if (use_cpp) {
-        X_f <- make_X_f(X)
-        w_f <- rbind(w0, w)
-        beta_f <- rbind(beta0, beta)
         D <- cpp_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
-        # Compute beta0, beta updates
-        beta_f <- cpp_beta_update(X_f, D$D0, D$D1, D$D2,
-                                         beta_f, sigma2, lambda)
+        # Compute beta_f updates
+        beta_f <- cpp_beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
 
-        # Compute w0, w updates (using one of the CD methods)
-        if (gating_option) {
-            w_f <- cpp_CoorGateP(X_f, w_f, D$D0, gamma, rho=0)
+        # Compute w_f updates (using one of the CD methods)
+        if (use_proximal_newton) {
+            w_f <- cpp_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
         } else {
-            w_f <- cpp_CoorGateP1(X_f, w_f, D$D0, gamma, rho=0)
+            w_f <- cpp_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
         }
 
         # Second inner loop - compute E-step estimates
@@ -105,85 +91,63 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
 
         # Compute sigma2 updates
         sigma2 <- cpp_sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
-
-        w0 = w_f[1,]
-        w = w_f[-1,]
-        beta0 = beta_f[1,]
-        beta = beta_f[-1,]
-
-        if (verbose) {
-            L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
-            EM_print_header(L2)
-            EM_print_vars(beta0, beta, w0, w, sigma2)
-        }
     } else {
-        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+        D <- EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
-        # Compute beta0, beta updates (using (possibly) parallel CD methods)
-        expert_update <- beta_update(X, D, beta0, beta, sigma2, lambda)
-        beta0 <- expert_update$beta0
-        beta <- expert_update$beta
+        # Compute beta_f updates (using (possibly) parallel CD methods)
+        beta_f <- beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
 
-        # Compute w0, w updates (using one of the CD methods)
-        if (gating_option) {
-            gate_update <- CoorGateP(X, w0, w, D$D0, gamma, rho=0)
+        # Compute w_f updates (using one of the CD methods)
+        if (use_proximal_newton) {
+            w_f <- gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
         } else {
-            gate_update <- CoorGateP1(X, w0, w, D$D0, gamma, rho=0)
+            w_f <- gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
         }
-        w0 <- gate_update$w0
-        w <- gate_update$w
 
         # Second inner loop - compute E-step estimates
-        D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
+        D <- EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
         # Compute sigma2 updates
-        sigma2 <- sigma2_update(X, D, beta0, beta)
+        sigma2 <- sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
         stopifnot(all(sigma2 > 0))
-
-        if (verbose) {
-            L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
-            EM_print_header(L2)
-            EM_print_vars(beta0, beta, w0, w, sigma2)
-        }
     }
-    return(c(w0,w,beta0,beta,sigma2))
+    if (verbose) {
+        L2 <- loglik(Zs, is_masked, X_f, w_f, beta_f, sigma2, gamma, lambda)
+        EM_print_header(L2)
+        EM_print_vars(beta_f, w_f, sigma2)
+    }
+    return(c(w_f,beta_f,sigma2))
 }
 
-stop_if_inconsistent_dims <- function(Zs,is_masked, X, params, hyp_params) {
-    w0 <- params$w0
-    w <- params$w
-    beta0 <- params$beta0
-    beta <- params$beta
+stop_if_inconsistent_dims <- function(Zs, is_masked, X_f, params, hyp_params) {
+    w_f <- params$w_f
+    beta_f <- params$beta_f
     sigma2 <- params$sigma2
     lambda <- hyp_params$lambda
     gamma <- hyp_params$gamma
 
-    n <- dim(X)[1]
+    n <- dim(X_f)[1]
     K <- hyp_params$K
     p <- hyp_params$p
 
     stopifnot(dim(Zs)[1] == n,
               dim(Zs)[2] == 2,
               length(is_masked) == n)
-    stopifnot(dim(beta)[1] == p,
-              dim(w)[1] == p)
-    stopifnot(length(beta0)==K,
-              dim(beta)[2]==K,
+    stopifnot(dim(beta_f)[1] == p+1,
+              dim(w_f)[1] == p+1)
+    stopifnot(dim(beta_f)[2]==K,
+              dim(w_f)[2]==K-1,
               length(sigma2)==K,
               length(lambda)==K,
-              length(gamma)==K-1,
-              length(w0)==K-1,
-              dim(w)[2]==K-1)
+              length(gamma)==K-1)
 }
 
 EM_print_header <- function(L2) {
     message("EM Iteration | log-likelihood: "  , round(L2, digits= 2))
 }
 
-EM_print_vars <- function(beta0, beta, w0, w, sigma2) {
-    print(paste("> w0: ", toString(round(w0, 5))))
-    print(paste("> w: ", toString(round(w, 5))))
-    print(paste("> beta0: ", toString(round(beta0, 5))))
-    print(paste("> beta: ", toString(round(beta, 5))))
+EM_print_vars <- function(beta_f, w_f, sigma2) {
+    print(paste("> w_f: ", toString(round(w_f, 5))))
+    print(paste("> beta_f: ", toString(round(beta_f, 5))))
     print(paste("> sigma2: ", toString(round(sigma2, 5))))
 }

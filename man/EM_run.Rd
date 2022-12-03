@@ -7,24 +7,25 @@
 EM_run(
   Zs,
   is_masked,
-  X,
+  X_f,
   params_init,
   hyp_params,
   maxit = 200,
   tol = 1e-04,
-  gating_option = FALSE,
+  use_cpp = FALSE,
+  use_proximal_newton = FALSE,
   verbose = FALSE
 )
 }
 \arguments{
-\item{params_init}{list of initial values for parameters (w0, w, beta0, beta, sigma2)}
+\item{params_init}{list of initial values for parameters (w_f, beta_f, sigma2)}
 
 \item{hyp_params}{list of fixed hyperparameter values (K, p, lambda, gamma)}
 
-\item{gating_option}{If TRUE, uses Proximal Newton-type Method; else Proximal Newton.}
+\item{use_proximal_newton}{If TRUE, uses Proximal Newton Method; else Proximal Newton-type.}
 }
 \value{
-list of parameter estimates (w0, w, beta0, beta, sigma2)
+list of parameter estimates (w_f, beta_f, sigma2)
 }
 \description{
 Title

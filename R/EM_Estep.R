@@ -1,25 +1,25 @@
 # w0, w K-1.
-EM_Estep <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2) {
+EM_Estep <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2) {
     stopifnot(all(sigma2 > 0))
     # At qth EM iteration, during the th ZAP iteration,
     # compute E-step estimates D0, D1, D2 for each ik.
 
-    n <- dim(X)[1]
-    K <- length(beta0)
+    n <- dim(X_f)[1]
+    K <- dim(beta_f)[2]
+    sigma <- sqrt(sigma2)
 
     #  Stores (D0, D1, D2) estimates for each i
     D0 <- matrix(NA, nrow=n, ncol=K)
     D1 <- matrix(NA, nrow=n, ncol=K)
     D2 <- matrix(NA, nrow=n, ncol=K)
-    pis <- pi_matrix(X, w0, w)
+    pis <- pi_matrix(X_f, w_f)
     for (i in 1:n) {
-        xi <- matrix(X[i,], nrow=1)
+        x_f <- matrix(X_f[i,], nrow=1)
+        mu <- x_f%*%beta_f
         if (is_masked[i]) {
-            out <- masked_moments(Zs[i,], xi,
-                                              pis[i,], beta0, beta, sigma2)
+            out <- masked_moments(Zs[i,], pis[i,], mu, sigma)
         } else {
-            out <- unmasked_moments(Zs[i,1], xi,
-                                                pis[i,], beta0, beta, sigma2)
+            out <- unmasked_moments(Zs[i,1], pis[i,], mu, sigma)
         }
         D0[i,] <- out$D0
         D1[i,] <- out$D1
@@ -30,16 +30,15 @@ EM_Estep <- function(Zs, is_masked, X, w0, w, beta0, beta, sigma2) {
 }
 
 # Works on SINGLE INSTANCES
-masked_moments <- function(zs, x, pi, beta0, beta, sigma2) {
-    dmeans <- beta0 + x%*%beta
-    dnorms <- 1e-30 + t(rbind(stats::dnorm(zs[1], dmeans, sqrt(sigma2)),
-                      stats::dnorm(zs[2], dmeans, sqrt(sigma2))))  #[K, 2]
-    dnorm_net <- rowSums(dnorms)  #phi(Z1,..) + phi(Z2,..)
-    products <- (dnorm_net) * pi # [K]  # (phi_1*pi + phi_2 * pi)
-    D0 <- products / sum(products)  #[K]
-    dnorm_props <- dnorms / dnorm_net  # [K,2]  # (phi1/(phi1+phi2), etc.)
-    M1 <- dnorm_props %*% zs # [K,1]
-    M2 <- dnorm_props %*% (zs^2)  # [K,1]
+masked_moments <- function(zs, pi, mu, sigma) {
+    dnorms <- 1e-45 + t(rbind(stats::dnorm(zs[1], mu, sigma),
+                      stats::dnorm(zs[2], mu, sigma)))  # small is best
+    dnorm_net <- rowSums(dnorms)
+    products <- (dnorm_net) * pi
+    D0 <- products / sum(products)
+    dnorm_props <- dnorms / dnorm_net
+    M1 <- dnorm_props %*% zs
+    M2 <- dnorm_props %*% (zs^2)
     D1 <- M1 * D0
     D2 <- M2 * D0
 
@@ -50,9 +49,8 @@ masked_moments <- function(zs, x, pi, beta0, beta, sigma2) {
 }
 
 # Works on SINGLE INSTANCES
-unmasked_moments <- function(z, x, pi, beta0, beta, sigma2) {
-    dmeans <- beta0 + x%*%beta
-    dnorms <- stats::dnorm(z, dmeans, sqrt(sigma2)) # [k]
+unmasked_moments <- function(z, pi, mu, sigma) {
+    dnorms <- stats::dnorm(z, mu, sigma) # [k]
     products <- dnorms * pi
     D0 <- products / rowSums(products)
     D1 <- D0 * z
@@ -63,10 +61,9 @@ unmasked_moments <- function(z, x, pi, beta0, beta, sigma2) {
 # Works on ALL INSTANCES
 # NOT ALLOWED TO RETURN NEGATIVE PROBABILITIES
 # May be sub-optimal due to stopifnots but fairly fast
-pi_matrix <- function(X, w0, w) {
-    n <- dim(X)[1]
-    X.full <- cbind(rep(1,n), X)
-    exp_weights <- cbind(exp(X.full%*%rbind(w0,w)), rep(1,n))
+pi_matrix <- function(X_f, w_f) {
+    n <- dim(X_f)[1]
+    exp_weights <- cbind(exp(X_f%*%w_f), rep(1,n))
     output <- exp_weights / rowSums(exp_weights)
     stopifnot(all(output >= 0))
     dimnames(output) <- NULL

@@ -11,7 +11,7 @@ arma::mat cpp_beta_update(arma::mat X_f, arma::mat D0, arma::mat D1,
                           arma::mat D2, arma::mat beta_f, arma::vec sigma2,
                           arma::vec lambda);
 
-arma::vec cpp_beta_CoorLQk(arma::mat X_f, arma::vec D0k,
+arma::vec cpp_beta_marginal_CD(arma::mat X_f, arma::vec D0k,
                            arma::vec D1k, arma::vec D2k,
                            arma::vec betak_f,
                            double sigma2k, double lambdak);
