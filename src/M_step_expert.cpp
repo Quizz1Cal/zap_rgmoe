@@ -78,8 +78,8 @@ arma::vec cpp_sigma2_update(arma::mat X_f, arma::mat D0,
             2*arma::dot(y_pred, D1.col(k)) +
             arma::dot(D0.col(k), arma::pow(y_pred, 2));
         sigma2[k] = (eps+numer) / (eps+arma::accu(D0.col(k)));
-        if (sigma2[k] < 0) {
-            throw std::out_of_range("sigma2 was negative");
+        if (!(sigma2[k] > 0)) {
+            throw std::out_of_range("sigma2 was zero or negative");
         }
     }
     return(sigma2);

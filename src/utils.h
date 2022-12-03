@@ -6,6 +6,8 @@
 // [[Rcpp::plugins(cpp11)]]
 using namespace Rcpp;
 
+#include <stdexcept>
+
 arma::mat cpp_pi_matrix(arma::mat X_f, arma::mat w_f);
 double cpp_soth(double x, double lambda);
 

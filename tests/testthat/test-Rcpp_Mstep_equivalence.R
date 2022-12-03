@@ -1,7 +1,3 @@
-test_that("EM run matches (masked data)", {
-    ;
-})
-
 test_that("beta_update matches (masked data)", {
     data <- withr::with_seed(2, make_test_EM_iteration_instance(mask_prop=0.3))
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
@@ -60,7 +56,7 @@ test_that("sigma2 update matches (masked data)", {
 
 test_that("CoorGate matches (un/masked data)", {
     # load unmasked test data
-    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0.3))
+    data <- withr::with_seed(3, make_test_EM_iteration_instance(mask_prop=0.4))
     w_f <- rbind(data$w0, data$w)
 
     # ZAP2
@@ -74,7 +70,7 @@ test_that("CoorGate matches (un/masked data)", {
 
 test_that("CoorGate1 matches (un/masked data)", {
     # load unmasked test data
-    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0.3))
+    data <- withr::with_seed(3, make_test_EM_iteration_instance(mask_prop=0.4))
     w_f <- rbind(data$w0, data$w)
 
     # ZAP2
@@ -88,8 +84,9 @@ test_that("CoorGate1 matches (un/masked data)", {
 
 test_that("CoorLQk matches (gating) (un/masked data)", {
     # load unmasked test data
-    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0.3))
+    data <- withr::with_seed(3, make_test_EM_iteration_instance(mask_prop=0.4))
     w_f <- rbind(data$w0, data$w)
+    k <- 2
 
     # ZAP
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
@@ -126,7 +123,7 @@ test_that("obj_gating matches", {
 })
 
 test_that("Fs matches", {
-    data <- withr::with_seed(5, make_test_EM_iteration_instance(mask_prop=0.3))
+    data <- withr::with_seed(3, make_test_EM_iteration_instance(mask_prop=0.4))
 
     D <- EM_Estep(data$Zs, data$is_masked, data$X,
                   data$w0, data$w, data$beta0, data$beta, data$sigma2)

@@ -31,7 +31,8 @@ make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000) {
 
     # Generate Z
     K <- 3 # null, l, or r
-    true_pis <- cbind(1-w.l-w.r, w.l, w.r)
+    true_pis <- cbind(1-w.l - w.r, w.l, w.r)
+    stopifnot(all(true_pis >= 0))
     delta <- c()
     Z <- c()
     densities <- c()
@@ -104,15 +105,6 @@ make_all_simulation_study_dataset_instances <- function(file_dir, n=5000,
 
 ############################ TESTING
 
-make_test_zap_problem_instance <- function(n=500) {
-    # Generates a simulated dataset instance from ZAP revised paper
-    dataset <- make_zap_simulated_dataset(setup=1, n=n, sigma=1,
-                                          eta=-2, zeta=1, eps=2.1)
-    Z <- dataset$Z
-    X <- dataset$X
-    return(list(Z=Z, X=X))
-}
-
 make_test_EM_parameter_instance <- function(p, K) {
     w0=rnorm(K-1)
     w=matrix(rnorm(p*(K-1)), nrow=p, ncol=K-1)
@@ -125,8 +117,10 @@ make_test_EM_parameter_instance <- function(p, K) {
                 sigma2=sigma2, gamma=gamma, lambda=lambda))
 }
 
-make_test_EM_iteration_instance <- function(n=500, mask_prop=0) {
-    problem_instance <- make_test_zap_problem_instance(n=n)
+make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
+                                            eta=-2, zeta=1, eps=2.1, mask_prop=0) {
+    problem_instance <- make_zap_simulated_dataset(setup=setup, n=n, sigma=sigma,
+                                                    eta=eta, zeta=zeta, eps=eps)
     Z <- problem_instance$Z
     X <- problem_instance$X
 
@@ -138,7 +132,6 @@ make_test_EM_iteration_instance <- function(n=500, mask_prop=0) {
     is_masked <- sample(c(rep(1,n_masked), rep(0, n-n_masked)),
                         replace=FALSE)
 
-    # TODO: Reverify on HDME with varied sigma2, tau sets.
     iter_params <- make_test_EM_parameter_instance(p=p, K=3)
     iter_params$X <- X
     iter_params$n <- n

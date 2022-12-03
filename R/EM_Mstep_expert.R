@@ -29,10 +29,13 @@ beta_CoorLQk <- function(X, D0k, D1k, D2k, beta0_k, beta_k, sigma2_k, lambda_k) 
     repeat {
         prev_val = cur_val
         for(j in 1:p) {
+            # "tau Z - tau*(X_fb_f-j)"
             rj <- D1k - D0k*(X[,-j]%*%as.matrix(beta_k[-j])+as.vector(beta0_k))
-            # rj <- replace_na(rj)
+            # "tau * sq(X[j])"
             denom <- D0k %*% (X[,j]^2)
+            # SoTh(numer, gammak) / denom
             beta_k[j] <- SoTh(X[,j] %*% rj, sigma2_k*lambda_k) / denom
+            # tau * (Z - Xbeta) / sum(tau)
             beta0_k <- (sum(D1k) -(D0k%*%X)%*%beta_k) / sum(D0k)
         }
         cur_val = obj_expert(X, D0k, D1k, D2k, beta0_k, beta_k, sigma2_k, lambda_k)
@@ -46,7 +49,9 @@ obj_expert <- function(X, D0k, D1k, D2k, beta0_k, beta_k,
     # All k-specific
     # Objective to maximise w.r.t. beta (dropping irrelevant terms)
     y_preds <- X%*%beta_k+c(beta0_k)  # WARNING: Adding constant.
+    # tau * (Z^2 - 2Zypred + ypred^2) /2 == tau/2 (Z-ypred)^2
     S0 <- (sum(D2k) -2*D1k%*%y_preds +sum(D0k*(y_preds)^2)) / 2
+    # gammak * 1norm_beta_coeffs
     S1 <- sigma2_k*lambda_k*sum(abs(beta_k))
     return(S0+S1)
 }

@@ -7,9 +7,6 @@
 // [[Rcpp::plugins(cpp11)]]
 using namespace Rcpp;
 
-#include <stdexcept>
-
-
 arma::mat cpp_beta_update(arma::mat X_f, arma::mat D0, arma::mat D1,
                           arma::mat D2, arma::mat beta_f, arma::vec sigma2,
                           arma::vec lambda);

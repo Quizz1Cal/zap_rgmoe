@@ -87,7 +87,7 @@ test_that("CoorLQk (wt. Beta) reconciles with ZAP on unmasked, equal-variance da
     tau_hdme <- RMoE:::Ge.step(betak_hdme, wk_hdme, data$sigma2[1],
                                data$Zs[,1], X_hdme, data$K)
     update_hdme <- RMoE:::CoorLQk(X_hdme, data$Zs[,1], tau_hdme[,k],
-                                  betak_hdme[,k], data$lambda[k], rho=0)
+                                  betak_hdme[,k], data$sigma2[k]*data$lambda[k], rho=0)
 
     expect_equal(update_zap2_hdme_fmt, update_hdme, tolerance=1e-4)
 })
@@ -170,7 +170,7 @@ test_that("Obj (Expert) matches ZAP on unmasked, equal-variance data", {
             tau_hdme <- RMoE:::Ge.step(betak_hdme, wk_hdme, data$sigma2[k],
                                        data$Zs[,1], X_hdme, data$K)
             obj_exp_hdme[s,k] <- RMoE:::Obj(tau_hdme[,k], X_hdme, data$Zs[,1],
-                                       betak_hdme[,k], data$lambda[k], rho=0)
+                                       betak_hdme[,k], data$sigma2[k]*data$lambda[k], rho=0)
         }
     }
 
@@ -265,42 +265,30 @@ test_that("HDME M-step (Expert, sigma2) matches ZAP on unmasked, equal-variance 
 test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-variance data", {
     withr::local_package("RMoE")
 
-    # load unmasked test data
-    data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
-    # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
-    data$sigma2 <- rep(data$sigma2[1], data$K)
+    #i=13: (formerly) nans in unmasked_moments due to neg-sigma2
+    #i=14: (formerly) NaN occurred because pi_matrix() has 0, and so /d_k was /0
+    #now: i=14 exhibits zap_loglik < hdme_loglik! Unsure if my fix has intervene
 
-    zap_params <- EM_run(data$Zs, data$is_masked, data$X, data, data,
-                         gating_option=T, verbose=FALSE)
-    zap_loglik <- loglik(data$Zs, data$is_masked, data$X, zap_params$w0,
-                         zap_params$w, zap_params$beta0, zap_params$beta,
-                         zap_params$sigma2, data$gamma, data$lambda)
+    for (i in c(5,13,14)) {
+        # load unmasked test data
+        data <- withr::with_seed(i, make_test_EM_iteration_instance(mask_prop=0))
+        # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
+        data$sigma2 <- rep(data$sigma2[1], data$K)
 
-    X_hdme <- cbind(rep(1,data$n), data$X)
-    hdme_params <- withr::with_seed(1, RMoE::GaussRMoE(X_hdme, data$Zs[,1], data$K, data$lambda,
-                                   data$gamma, option=T))
-    hdme_loglik <- RMoE:::GLOG(X=X_hdme, Y=data$Zs[,1], wk=hdme_params$wk,
-                               betak=hdme_params$betak, S=hdme_params$sigma,
-                               lambda=data$lambda, gamma=data$gamma, rho=0)
+        zap_params <- EM_run(data$Zs, data$is_masked, data$X, data, data,
+                             gating_option=T, use_cpp=F, verbose=FALSE)
+        zap_loglik <- loglik(data$Zs, data$is_masked, data$X, zap_params$w0,
+                             zap_params$w, zap_params$beta0, zap_params$beta,
+                             zap_params$sigma2, data$gamma, data$lambda)
 
-    expect_lte(zap_loglik, hdme_loglik)
-
-    # Sanity check: mapping to single-sigma, both logliks agree here.
-    if (F) {
-        zap_betak_hdme <- rbind(zap_params$beta0, zap_params$beta)
         X_hdme <- cbind(rep(1,data$n), data$X)
-        zap_wk_hdme <- cbind(zap_params$w0, t(zap_params$w))
-        D <- EM_Estep(data$Zs, data$is_masked, data$X,
-                      zap_params$w0, zap_params$w, zap_params$beta0,
-                      zap_params$beta, zap_params$sigma2)
-        zap_inferred_sigma2 <- sum(zap_params$sigma2 * colSums(D$D0)) / data$n
-        zap_inferred_loglik <- loglik(data$Zs, data$is_masked, data$X, zap_params$w0,
-                                   zap_params$w, zap_params$beta0, zap_params$beta,
-                                   zap_inferred_sigma2, data$gamma, data$lambda)
-        zap_loglik_hdme_fmt <- RMoE:::GLOG(X=X_hdme, Y=data$Zs[,1], wk=zap_wk_hdme,
-                                   betak=zap_betak_hdme, S=zap_inferred_sigma2,
+        hdme_params <- withr::with_seed(1, RMoE::GaussRMoE(X_hdme, data$Zs[,1], data$K, data$lambda,
+                                       data$gamma, option=T))
+        hdme_loglik <- RMoE:::GLOG(X=X_hdme, Y=data$Zs[,1], wk=hdme_params$wk,
+                                   betak=hdme_params$betak, S=hdme_params$sigma,
                                    lambda=data$lambda, gamma=data$gamma, rho=0)
 
-        expect_equal(zap_inferred_loglik, zap_loglik_hdme_fmt)
+        # print(paste(c(i, zap_loglik, hdme_loglik)))
+        expect_gte(zap_loglik, hdme_loglik, paste0("@i=", i, ", `zap_loglik`"))
     }
 })

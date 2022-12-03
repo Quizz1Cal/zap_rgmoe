@@ -17,6 +17,7 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
 
     dataset <- list(Zs=Zs, is_masked=is_masked, X=X)
 
+    # TODO: switch to squarem once debugged
     res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
                                objfn=EM_objfn,
                                dataset=dataset,
@@ -25,8 +26,8 @@ EM_run <- function(Zs, is_masked, X, params_init, hyp_params, maxit=200,
                                gating_option=gating_option, verbose=verbose,
                                control=list(tol=tol, maxiter=maxit))
     if (verbose) {
-        success_str <- if(!res$convergence & res$fpevals < maxit) {
-            "CONVERGED"} else "LIKELY DNC"
+        success_str <- if (res$convergence) {
+            "CONVERGED"} else sprintf("DID NOT CONVERGE @ maxit=%d, tol=%.6f", maxit, tol)
         print(sprintf("EM Completed in %d Iterations (%s)",
                       res$fpevals, success_str))
     }
@@ -80,44 +81,70 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
     is_masked <- dataset$is_masked
     X <- dataset$X
 
+
     # Compute E-step estimates
     if (use_cpp) {
-        D <- cpp_EM_Estep(Zs, is_masked, make_X_f(X), rbind(w0, w),
-                          rbind(beta0, beta), sigma2)
+        X_f <- make_X_f(X)
+        w_f <- rbind(w0, w)
+        beta_f <- rbind(beta0, beta)
+        D <- cpp_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
+
+        # Compute beta0, beta updates
+        beta_f <- cpp_beta_update(X_f, D$D0, D$D1, D$D2,
+                                         beta_f, sigma2, lambda)
+
+        # Compute w0, w updates (using one of the CD methods)
+        if (gating_option) {
+            w_f <- cpp_CoorGateP(X_f, w_f, D$D0, gamma, rho=0)
+        } else {
+            w_f <- cpp_CoorGateP1(X_f, w_f, D$D0, gamma, rho=0)
+        }
+
+        # Second inner loop - compute E-step estimates
+        D <- cpp_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
+
+        # Compute sigma2 updates
+        sigma2 <- cpp_sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
+
+        w0 = w_f[1,]
+        w = w_f[-1,]
+        beta0 = beta_f[1,]
+        beta = beta_f[-1,]
+
+        if (verbose) {
+            L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
+            EM_print_header(L2)
+            EM_print_vars(beta0, beta, w0, w, sigma2)
+        }
     } else {
         D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
-    }
 
+        # Compute beta0, beta updates (using (possibly) parallel CD methods)
+        expert_update <- beta_update(X, D, beta0, beta, sigma2, lambda)
+        beta0 <- expert_update$beta0
+        beta <- expert_update$beta
 
-    # Compute beta0, beta updates (using (possibly) parallel CD methods)
-    expert_update <- beta_update(X, D, beta0, beta, sigma2, lambda)
-    beta0 <- expert_update$beta0
-    beta <- expert_update$beta
+        # Compute w0, w updates (using one of the CD methods)
+        if (gating_option) {
+            gate_update <- CoorGateP(X, w0, w, D$D0, gamma, rho=0)
+        } else {
+            gate_update <- CoorGateP1(X, w0, w, D$D0, gamma, rho=0)
+        }
+        w0 <- gate_update$w0
+        w <- gate_update$w
 
-    # Compute w0, w updates (using one of the CD methods)
-    if (gating_option) {
-        gate_update <- CoorGateP(X, w0, w, D$D0, gamma, rho=0)
-    } else {
-        gate_update <- CoorGateP1(X, w0, w, D$D0, gamma, rho=0)
-    }
-    w0 <- gate_update$w0
-    w <- gate_update$w
-
-    # Second inner loop - compute E-step estimates
-    if (use_cpp) {
-        D <- cpp_EM_Estep(Zs, is_masked, make_X_f(X), rbind(w0, w),
-                          rbind(beta0, beta), sigma2)
-    } else {
+        # Second inner loop - compute E-step estimates
         D <- EM_Estep(Zs, is_masked, X, w0, w, beta0, beta, sigma2)
-    }
 
-    # Compute sigma2 updates
-    sigma2 <- sigma2_update(X, D, beta0, beta)
+        # Compute sigma2 updates
+        sigma2 <- sigma2_update(X, D, beta0, beta)
+        stopifnot(all(sigma2 > 0))
 
-    if (verbose) {
-        L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
-        EM_print_header(L2)
-        EM_print_vars(beta0, beta, w0, w, sigma2)
+        if (verbose) {
+            L2 <- loglik(Zs, is_masked, X, w0, w, beta0, beta, sigma2, gamma, lambda)
+            EM_print_header(L2)
+            EM_print_vars(beta0, beta, w0, w, sigma2)
+        }
     }
     return(c(w0,w,beta0,beta,sigma2))
 }

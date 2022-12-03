@@ -14,7 +14,7 @@
 
 #using Proximal Newton method
 # NOTE that they used to have wk as [K x p]
-CoorGateP = function(X, w0, w, tau, Gamma, rho) {
+CoorGateP = function(X, w0, w, tau, gamma, rho) {
     n = dim(X)[1]
     K = ncol(tau)
     Stepsize = 0.5  # for backtracking
@@ -25,19 +25,21 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
     repeat {
         w0_old = w0_new
         w_old = w_new
-        Q_old = Fs(X, tau, w0_old, w_old, Gamma, rho)
+        Q_old = Fs(X, tau, w0_old, w_old, gamma, rho)
         for(k in 1:(K-1)) {
             #First: compute the quadratic approximation w.r.t (w_k): L_Qk
             P_k = pi_matrix(X, w0_new, w_new)[,k]
             d_k = P_k*(1-P_k)
-            c_k = w0_new[k] + X%*%w_new[,k] + (tau[,k]-P_k)/d_k
+            c_k = w0_new[k] + X%*%w_new[,k] +
+                (tau[,k]-P_k)/(1e-30 + d_k)
+            if(any(is.na(c(c_k, d_k, P_k)))) {browser()}
             #Second: coordinate descent for maximizing L_Qk
             out <- CoorLQk(X, Y=c_k, tau=d_k, alpha=w0_new[k],
-                           beta=w_new[,k], Gamma[k], rho)
+                           beta=w_new[,k], gamma[k], rho)
             w0_new[k] <- out[1]
             w_new[,k] <- out[-1]
         }
-        Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
+        Q_new = Fs(X, tau, w0_new, w_new, gamma, rho)
 
         #-------------BACKTRACKING LINE SEARCH
         t = 1
@@ -45,7 +47,7 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
             t = t*Stepsize
             w0_new = w0_new*t + w0_old*(1-t)
             w_new = w_new*t + w_old*(1-t)
-            Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
+            Q_new = Fs(X, tau, w0_new, w_new, gamma, rho)
         }
         if((Q_new - Q_old) < eps) break
     }
@@ -53,7 +55,7 @@ CoorGateP = function(X, w0, w, tau, Gamma, rho) {
 }
 
 #using proximal Newton-type
-CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
+CoorGateP1 = function(X, w0, w, tau, gamma, rho) {
     n = dim(X)[1]
     K = ncol(tau)
     d_k = c(rep(1/4,n))
@@ -65,20 +67,20 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
     repeat {
         w0_old = w0_new
         w_old = w_new
-        Q_old = Fs(X, tau, w0_old, w_old, Gamma, rho)
+        Q_old = Fs(X, tau, w0_old, w_old, gamma, rho)
         for(k in 1:(K-1)) {
             #First: compute the quadratic approximation w.r.t (w_k): L_Qk
             P_k = pi_matrix(X, w0_new, w_new)[,k]
-            # d_k = P_k*(1-P_k) # Was commented out in RMoE
             c_k = w0_new[k] + X%*%w_new[,k] + 4*(tau[,k]-P_k)
+            if(any(is.na(c(c_k, P_k)))) {browser()}
 
             #Second: coordinate descent for maximizing L_Qk
             out <- CoorLQk(X, Y=c_k, tau=d_k, alpha=w0_new[k],
-                           beta=w_new[,k], Gamma[k], rho)
+                           beta=w_new[,k], gamma[k], rho)
             w0_new[k] <- out[1]
             w_new[,k] <- out[-1]
         }
-        Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
+        Q_new = Fs(X, tau, w0_new, w_new, gamma, rho)
 
         #-------------BACKTRACKING LINE SEARCH
         t = 1
@@ -86,7 +88,7 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
             t = t*Stepsize
             w0_new = w0_new*t + w0_old*(1-t)
             w_new = w_new*t + w_old*(1-t)
-            Q_new = Fs(X, tau, w0_new, w_new, Gamma, rho)
+            Q_new = Fs(X, tau, w0_new, w_new, gamma, rho)
         }
         if((Q_new - Q_old) < eps) break
     }
@@ -95,10 +97,11 @@ CoorGateP1 = function(X, w0, w, tau, Gamma, rho) {
 
 
 # SOME ASPECTS OF ITS INNER COMPUTATION LOOP NEED CHECKING.
-CoorLQk = function(X, Y, tau, alpha, beta, Gammak, rho) {
+CoorLQk = function(X, Y, tau, alpha, beta, gammak, rho) {
+    stopifnot(all(tau >= 0) & all(tau <= 1))
     epsilon = 10^(-6) #Stopping condition
     p = dim(X)[2]
-    Val = obj_gating(tau, X, Y, alpha, beta, Gammak, rho)
+    Val = obj_gating(tau, X, Y, alpha, beta, gammak, rho)
     repeat {
         Val1 = Val
         for(j in 1:p) {
@@ -107,12 +110,11 @@ CoorLQk = function(X, Y, tau, alpha, beta, Gammak, rho) {
 
             numerator = colSums(as.matrix(rij*tau*X[,j]))
             denominator = rho + colSums(as.matrix(tau*(X[,j]^2)))  # Consider t(tau)%*%X^2[,j]
-
-            beta[j] = SoTh(numerator, Gammak)/denominator
+            beta[j] = SoTh(numerator, gammak)/denominator
             alpha = t(as.matrix(tau))%*%(Y-X%*%as.matrix(beta))
             alpha = as.vector(alpha / colSums(as.matrix(tau)))
         }
-        Val = obj_gating(tau, X, Y, alpha, beta, Gammak, rho)
+        Val = obj_gating(tau, X, Y, alpha, beta, gammak, rho)
 
         if ((Val1 - Val) < epsilon) break
     }
@@ -122,9 +124,9 @@ CoorLQk = function(X, Y, tau, alpha, beta, Gammak, rho) {
 #Compute the value of the objective function
 # I believe this is the negation of (20), excluding C(w)
 # I think there's a typo in the rho line below
-obj_gating <- function(tau, X, Y, alpha, beta, Gammak, rho) {
+obj_gating <- function(tau, X, Y, alpha, beta, gammak, rho) {
     Val = t(as.matrix(tau))%*%((alpha+X%*%beta-Y)^2) / 2
-    if(Gammak != 0) Val = Val + Gammak*(colSums(as.matrix(abs(beta))))
+    if(gammak != 0) Val = Val + gammak*(colSums(as.matrix(abs(beta))))
     if(rho != 0) Val = Val + rho/2*(colSums(as.matrix(beta))^2)
     return (Val)
 }
@@ -135,11 +137,12 @@ obj_gating <- function(tau, X, Y, alpha, beta, Gammak, rho) {
 Fs <- function(X, tau, w0, w, gamma, rho) {
     w_1norm = colSums(abs(w))
     pis <- pi_matrix(X, w0, w)
-    S0 = sum(tau*log(pis+1e-30))
+    stopifnot(all(pis >= 0))
+    S0 = sum(tau*log(pis+1e-15))  # 1e-15 NOT IN CPP. Also should be irrel. as Fs just for compxn
     S1 = sum(gamma*w_1norm)
     S2 = sum(w^2)*rho/2
     if (any(is.na(c(S0,S1,S2)))) {
-        scores <- c(S0,S1,S2);
+        ; # browser();
     }
     return(S0 - S1 - S2)
 }

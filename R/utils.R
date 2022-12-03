@@ -52,8 +52,3 @@ SoTh = function(x, lambda)
     if (x < -lambda) return (x+lambda)
     return (0)
 }
-
-replace_na <- function(x, val=0) {
-    x[is.na(x)] <- val
-    return(x)
-}

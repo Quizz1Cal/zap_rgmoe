@@ -15,9 +15,9 @@
 arma::mat cpp_masked_moments(arma::vec zs, arma::vec pi,
                              arma::vec mu, arma::vec sigma) {
     int k = sigma.size();
-    arma::mat dnorms = arma::zeros(k, 2);
+    arma::mat dnorms(k, 2);
     for (int j = 0; j < 2; j++) {
-        dnorms.col(j) = 1e-12 + arma::normpdf(zs[j], mu, sigma);
+        dnorms.col(j) = arma::normpdf(zs[j], mu, sigma);
     }
     arma::vec net_dnorms = arma::sum(dnorms, 1);
     arma::vec products = net_dnorms % pi;
@@ -25,7 +25,7 @@ arma::mat cpp_masked_moments(arma::vec zs, arma::vec pi,
     arma::vec M1 = dnorm_props * zs;
     arma::vec M2 = dnorm_props * arma::pow(zs, 2);
 
-    arma::mat D = arma::zeros(k, 3);
+    arma::mat D(k, 3);
     D.col(0) = arma::normalise(products, 1);
     D.col(1) = D.col(0) % M1;
     D.col(2) = D.col(0) % M2;
@@ -36,9 +36,9 @@ arma::mat cpp_masked_moments(arma::vec zs, arma::vec pi,
 arma::mat cpp_unmasked_moments(double z, arma::vec pi,
                                arma::vec mu, arma::vec sigma) {
     int k = sigma.size();
-    arma::vec log_dnorms = arma::log_normpdf(z, mu, sigma);
-    arma::vec products = exp(log_dnorms + log(pi));
-    arma::mat D = arma::zeros(k, 3);
+    arma::vec dnorms = arma::normpdf(z, mu, sigma);
+    arma::vec products = dnorms % pi;
+    arma::mat D(k, 3);
     D.col(0) = arma::normalise(products, 1);
     D.col(1) = D.col(0) * z;
     D.col(2) = D.col(0) * pow(z, 2);
