@@ -34,7 +34,7 @@ arma::vec cpp_beta_marginal_CD(arma::mat X_f, arma::vec D0k,
 
             double denom = arma::dot(D0k,arma::pow(X_f.col(j), 2));
 
-            betak_f[j] = cpp_soth(arma::dot(X_f.col(j), rj),
+            betak_f[j] = cpp_SoTh(arma::dot(X_f.col(j), rj),
                                   sigma2k*lambdak) / denom;
             betak_f[0] = (arma::accu(D1k) - arma::dot(D0k,
                                      X_f*betak_f - betak_f[0]))

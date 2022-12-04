@@ -92,23 +92,23 @@ EM_fixed_pt_fn <- function(params_vec, dataset, hyp_params, use_cpp,
         # Compute sigma2 updates
         sigma2 <- cpp_sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
     } else {
-        D <- EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
+        D <- R_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
         # Compute beta_f updates (using (possibly) parallel CD methods)
-        beta_f <- beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
+        beta_f <- R_beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
 
         # Compute w_f updates (using one of the CD methods)
         if (use_proximal_newton) {
-            w_f <- gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
+            w_f <- R_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
         } else {
-            w_f <- gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
+            w_f <- R_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
         }
 
         # Second inner loop - compute E-step estimates
-        D <- EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
+        D <- R_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
         # Compute sigma2 updates
-        sigma2 <- sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
+        sigma2 <- R_sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
         stopifnot(all(sigma2 > 0))
     }
     if (verbose) {

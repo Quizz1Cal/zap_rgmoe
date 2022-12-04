@@ -50,7 +50,7 @@ make_X_f <- function(X) {
 # Sourced from HDME-master.
 # TODO: Cite.
 # TODO: improve so it works on any-shape X.
-SoTh = function(x, lambda)
+R_SoTh = function(x, lambda)
 {
     if (lambda==0) return (x)
     if (x > lambda) return (x-lambda)

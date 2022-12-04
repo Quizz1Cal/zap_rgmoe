@@ -9,7 +9,7 @@ arma::mat cpp_pi_matrix(arma::mat X_f, arma::mat w_f) {
 }
 
 //[[Rcpp::export]]
-double cpp_soth(double x, double lambda) {
+double cpp_SoTh(double x, double lambda) {
     if (lambda == 0) {
         return(x);
     } else if (x > lambda) {

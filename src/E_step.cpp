@@ -17,7 +17,7 @@ arma::mat cpp_masked_moments(arma::vec zs, arma::vec pi,
     int k = sigma.size();
     arma::mat dnorms(k, 2);
     for (int j = 0; j < 2; j++) {
-        dnorms.col(j) = arma::normpdf(zs[j], mu, sigma);
+        dnorms.col(j) = 1e-45 + arma::normpdf(zs[j], mu, sigma);
     }
     arma::vec net_dnorms = arma::sum(dnorms, 1);
     arma::vec products = net_dnorms % pi;

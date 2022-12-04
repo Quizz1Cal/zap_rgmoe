@@ -49,7 +49,7 @@ cpp_pi_matrix <- function(X_f, w_f) {
     .Call(`_zap_rgmoe_cpp_pi_matrix`, X_f, w_f)
 }
 
-cpp_soth <- function(x, lambda) {
-    .Call(`_zap_rgmoe_cpp_soth`, x, lambda)
+cpp_SoTh <- function(x, lambda) {
+    .Call(`_zap_rgmoe_cpp_SoTh`, x, lambda)
 }
 

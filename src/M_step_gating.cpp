@@ -81,7 +81,7 @@ arma::vec cpp_weight_marginal_CD(arma::vec Y, arma::mat X_f, arma::vec tau,
             double numer = arma::accu(rj % tau % X_f.col(j));
             double denom = arma::accu(tau % arma::pow(X_f.col(j), 2));
 
-            wk_f[j] = cpp_soth(numer, gammak) / denom;
+            wk_f[j] = cpp_SoTh(numer, gammak) / denom;
             wk_f[0] = arma::dot(tau, Y - X_f*wk_f + wk_f[0]) / arma::accu(tau);
         }
         cur_val = cpp_obj_gating(Y, X_f, tau, wk_f, gammak);

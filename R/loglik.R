@@ -5,7 +5,7 @@ loglik <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2, gamma, lambda) {
     p = dim(X_f)[2] - 1
     K = dim(beta_f)
 
-    pis <- pi_matrix(X_f, w_f)
+    pis <- R_pi_matrix(X_f, w_f)
     mu <- X_f %*% beta_f
     dnorms <- matrix(NA, nrow=n, ncol=K)
     for (i in 1:n) {

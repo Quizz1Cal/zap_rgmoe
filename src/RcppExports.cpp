@@ -192,15 +192,15 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// cpp_soth
-double cpp_soth(double x, double lambda);
-RcppExport SEXP _zap_rgmoe_cpp_soth(SEXP xSEXP, SEXP lambdaSEXP) {
+// cpp_SoTh
+double cpp_SoTh(double x, double lambda);
+RcppExport SEXP _zap_rgmoe_cpp_SoTh(SEXP xSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_soth(x, lambda));
+    rcpp_result_gen = Rcpp::wrap(cpp_SoTh(x, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -218,7 +218,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_zap_rgmoe_cpp_obj_gating", (DL_FUNC) &_zap_rgmoe_cpp_obj_gating, 5},
     {"_zap_rgmoe_cpp_Fs", (DL_FUNC) &_zap_rgmoe_cpp_Fs, 4},
     {"_zap_rgmoe_cpp_pi_matrix", (DL_FUNC) &_zap_rgmoe_cpp_pi_matrix, 2},
-    {"_zap_rgmoe_cpp_soth", (DL_FUNC) &_zap_rgmoe_cpp_soth, 2},
+    {"_zap_rgmoe_cpp_SoTh", (DL_FUNC) &_zap_rgmoe_cpp_SoTh, 2},
     {NULL, NULL, 0}
 };
 

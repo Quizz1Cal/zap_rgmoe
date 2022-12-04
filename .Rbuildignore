@@ -3,6 +3,7 @@
 ^R\.ignore\.$
 ^\.git$
 ^data/.*$
+^R/Comparison/.*$
 
 ^.*Notes.*$
 ^README.Rmd$

@@ -42,7 +42,6 @@ test_that("CoorLQk (wt. w) matches ZAP on unmasked, equal-variance data", {
                   data$sigma2)
     data_zap2 <- weight_marginal_CD(data$Zs[,1], data$X_f, D$D0[,k],
                                     data$w_f[,k], data$gamma[k])
-    update_zap2_hdme_fmt <- data_zap2
 
     # HDME
     tau_hdme <- RMoE:::Ge.step(data$beta_f, t(data$w_f), data$sigma2[1],
@@ -50,7 +49,7 @@ test_that("CoorLQk (wt. w) matches ZAP on unmasked, equal-variance data", {
     update_hdme <- RMoE:::CoorLQk(data$X_f, data$Zs[,1], tau_hdme[,k],
                                   t(data$w_f)[k,], data$gamma[k], rho=0)
 
-    expect_equal(update_zap2_hdme_fmt, update_hdme)
+    expect_equal(data_zap2, update_hdme, ignore_attr=TRUE)
 })
 
 test_that("CoorLQk (wt. Beta) reconciles with ZAP on unmasked, equal-variance data", {
@@ -74,7 +73,7 @@ test_that("CoorLQk (wt. Beta) reconciles with ZAP on unmasked, equal-variance da
     update_hdme <- RMoE:::CoorLQk(data$X_f, data$Zs[,1], tau_hdme[,k],
                                   data$beta_f[,k], data$sigma2[k]*data$lambda[k], rho=0)
 
-    expect_equal(update_zap2, update_hdme, tolerance=1e-4)
+    expect_equal(update_zap2, update_hdme, ignore_attr=TRUE, tolerance=1e-4)
 })
 
 test_that("HDME E-step matches ZAP on unmasked, equal-variance data", {

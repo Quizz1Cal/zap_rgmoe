@@ -106,7 +106,7 @@ q_estimates <- function(Z_pairs, X_f, params) {
     sigma2 <- params$sigma2
 
     n <- dim(X)[1]
-    pis <- pi_matrix(X_f, w_f)
+    pis <- R_pi_matrix(X_f, w_f)
     mu <- X_f %*% beta_f
 
     dZ <- c()
