@@ -2,7 +2,7 @@
 % Please edit documentation in R/zap_algorithm.R
 \name{compute_FDP_finite_est}
 \alias{compute_FDP_finite_est}
-\title{Return FDP_estimate without thresholding}
+\title{Return FDP_estimate without user thresholding}
 \usage{
 compute_FDP_finite_est(Z, sl, sr)
 }
@@ -22,5 +22,5 @@ compute_FDP_finite_est(Z, rep(0.15, 5), rep(0.85, 5))
 }
 }
 \description{
-Return FDP_estimate without thresholding
+Return FDP_estimate without user thresholding
 }

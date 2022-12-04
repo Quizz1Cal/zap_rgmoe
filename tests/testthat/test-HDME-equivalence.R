@@ -242,7 +242,7 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
         data$sigma2 <- rep(data$sigma2[1], data$K)
 
         zap_params <- EM_run(data$Zs, data$is_masked, data$X_f, data, data,
-                             use_proximal_newton=F, use_cpp=F, verbose=FALSE)
+                             maxit=200, use_proximal_newton=F, use_cpp=F, verbose=FALSE)
         zap_loglik <- loglik(data$Zs, data$is_masked, data$X_f, zap_params$w_f,
                              zap_params$beta_f, zap_params$sigma2, gamma=data$gamma,
                              lambda=data$lambda)

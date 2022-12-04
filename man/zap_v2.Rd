@@ -2,28 +2,29 @@
 % Please edit documentation in R/zap_algorithm.R
 \name{zap_v2}
 \alias{zap_v2}
-\title{ZAP algorithm using RGMOE z-value model}
+\title{ZAP algorithm using Regularised Gaussian Mixture-of-Expert Model}
 \usage{
 zap_v2(
   Z,
   X,
-  alpha = 0.05,
-  alpha_m = 0.2,
   K,
   lambda,
   gamma,
-  maxit = 10,
+  alpha = 0.05,
+  alpha_m = 0.2,
+  maxit = 50,
+  masking_method = 1,
   tol = 1e-04,
-  nfits = 100,
+  nfits = 50,
   use_proximal_newton = FALSE,
-  zap_verbose = TRUE,
+  zap_verbose = FALSE,
   EM_verbose = FALSE
 )
 }
 \arguments{
-\item{Z}{numeric vector of observed z-values to fit}
+\item{Z}{numeric vector of observed z-values to fit. TODO - assume scaled for unit variance, but not zero mean.}
 
-\item{X}{dataframe of predictors (standardised), EXCLUDING intercept col}
+\item{X}{n x p matrix-like object; n vectors of p predictors (standardised), EXCLUDING intercept col}
 
 \item{alpha}{targeted FDR level.  Default to 0.05.}
 
@@ -39,5 +40,5 @@ zap_v2(
 Vector of indices for samples to reject
 }
 \description{
-ZAP algorithm using RGMOE z-value model
+ZAP algorithm using Regularised Gaussian Mixture-of-Expert Model
 }

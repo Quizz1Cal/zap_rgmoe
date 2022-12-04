@@ -1,10 +1,7 @@
-test_that("Masked D-estimates can handle small eps-small dnorm", {
-    test_case <- readRDS(test_path("fixtures", "zero_dnorm_D.RData"))
-    mu <- test_case$x %*% test_case$beta + test_case$beta0
-    Di <- R_masked_moments(test_case$zs, test_case$pi, mu, sqrt(test_case$sigma2))
-    expect_false(any(is.na(Di[,1])) | any(is.na(Di[,2])) | any(is.na(Di[,3])))
-    Di_cpp <- cpp_masked_moments(test_case$zs, test_case$pi, mu, sqrt(test_case$sigma2))
-    expect_false(any(is.na(Di_cpp[,1])) | any(is.na(Di_cpp[,2])) | any(is.na(Di_cpp[,3])))
+test_that("Failure to converge is reported", {
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0.3))
+    expect_warning(EM_run(data$Zs, data$is_masked, data$X_f, data, data, maxit=2, tol=1e-6,
+                     use_proximal_newton=F, use_cpp=T, verbose=F), regexp="DID NOT CONVERGE")
 })
 
 test_that("Both marginal_CD objectives agree on equal-variance, unmasked data", {
@@ -87,6 +84,6 @@ if (F) {
         M1 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=TRUE)
         M2 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, use_proximal_newton=FALSE)
 
-        expect_equal(M1, m2, tolerance=1e-3)
+        expect_equal(M1, M2, tolerance=1e-3)
     })
 }

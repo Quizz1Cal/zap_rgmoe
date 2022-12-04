@@ -10,7 +10,7 @@ EM_run(
   X_f,
   params_init,
   hyp_params,
-  maxit = 200,
+  maxit,
   tol = 1e-04,
   use_cpp = FALSE,
   use_proximal_newton = FALSE,

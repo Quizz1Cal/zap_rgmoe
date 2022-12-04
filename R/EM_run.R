@@ -5,7 +5,7 @@
 #' @param use_proximal_newton If TRUE, uses Proximal Newton Method; else Proximal Newton-type.
 #'
 #' @return list of parameter estimates (w_f, beta_f, sigma2)
-EM_run <- function(Zs, is_masked, X_f, params_init, hyp_params, maxit=200,
+EM_run <- function(Zs, is_masked, X_f, params_init, hyp_params, maxit,
                    tol=1e-4, use_cpp=FALSE, use_proximal_newton=FALSE, verbose=FALSE) {
 
     stop_if_inconsistent_dims(Zs, is_masked, X_f, params_init, hyp_params)
@@ -25,11 +25,11 @@ EM_run <- function(Zs, is_masked, X_f, params_init, hyp_params, maxit=200,
                                use_proximal_newton=use_proximal_newton,
                                verbose=verbose,
                                control=list(tol=tol, maxiter=maxit))
+    if (!res$convergence) {
+        warning(sprintf("DID NOT CONVERGE @ maxit=%d, tol=%.1e", maxit, tol))
+    }
     if (verbose) {
-        success_str <- if (res$convergence) {
-            "CONVERGED"} else sprintf("DID NOT CONVERGE @ maxit=%d, tol=%.6f", maxit, tol)
-        print(sprintf("EM Completed in %d Iterations (%s)",
-                      res$fpevals, success_str))
+        message("|| EM Completed")
     }
 
     return(params_vec_to_list(res$par, hyp_params))
@@ -143,11 +143,11 @@ stop_if_inconsistent_dims <- function(Zs, is_masked, X_f, params, hyp_params) {
 }
 
 EM_print_header <- function(L2) {
-    message("EM Iteration | log-likelihood: "  , round(L2, digits= 2))
+    message("|| EM Iteration | log-likelihood: "  , round(L2, digits= 2))
 }
 
 EM_print_vars <- function(beta_f, w_f, sigma2) {
-    print(paste("> w_f: ", toString(round(w_f, 5))))
-    print(paste("> beta_f: ", toString(round(beta_f, 5))))
-    print(paste("> sigma2: ", toString(round(sigma2, 5))))
+    message("|| > w_f:    ", toString(round(w_f, 5)))
+    message("|| > beta_f: ", toString(round(beta_f, 5)))
+    message("|| > sigma2: ", toString(round(sigma2, 5)))
 }

@@ -1,5 +1,5 @@
 USE_CPP=TRUE
-print(paste0("Running with USE_CPP=", if (USE_CPP) "TRUE" else "FALSE"))
+print(paste0("Running with USE_CPP=", USE_CPP))
 
 EM_Estep <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2) {
     if (USE_CPP) {
