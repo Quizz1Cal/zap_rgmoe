@@ -22,26 +22,22 @@ make_test_EM_parameter_instance <- function(p, K) {
                 gamma=gamma, lambda=lambda))
 }
 
-make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
+make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1, K=2,
                                             eta=-2, zeta=1, eps=2.1, mask_prop=0) {
-    problem_instance <- make_zap_simulated_dataset(setup=setup, n=n, sigma=sigma,
+    # Problem instance
+    data <- make_zap_simulated_dataset(setup=setup, n=n, sigma=sigma,
                                                    eta=eta, zeta=zeta, eps=eps)
-    Z <- problem_instance$Z
-    X <- problem_instance$X
-    X_f=make_X_f(X)
+    Z <- data$Z
+    X <- data$X
+    n_masked <- round(data$n*mask_prop)
+    is_masked <- sample(c(rep(1,n_masked), rep(0, data$n-n_masked)),
+                             replace=FALSE)
 
-    Zs <- mask_Z(Z, masking_method=-1)
-    n <- dim(X)[1]
-    p <- dim(X)[2]
-    n_masked <- round(n*mask_prop)
-    is_masked <- sample(c(rep(1,n_masked), rep(0, n-n_masked)),
-                        replace=FALSE)
+    # Abuse of interface to generate mock data.
+    data <- mask_data(data, args=list(masking_method="basic", n=data$n))
+    data$is_masked <- is_masked
 
-    iter_params <- make_test_EM_parameter_instance(p=p, K=3)
-    iter_params$X_f <- X_f
-    iter_params$n <- n
-    iter_params$p <- p
-    iter_params$Zs <- Zs
-    iter_params$is_masked <- is_masked
-    return(iter_params)
+
+    data <- append(data, make_test_EM_parameter_instance(p=data$p, K=K))
+    return(data)
 }

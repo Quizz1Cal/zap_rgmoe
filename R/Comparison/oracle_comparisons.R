@@ -85,7 +85,7 @@ rej_main = main_oracle(setup=paste0("S", setup),
                        z=data$Z,
                        dens=data$eta,
                        wsuccess=1-data$null_probs,
-                       altvar=data$sigma^2,
+                       altvar=data$sigma_true^2,
                        w_l=data$true_pis[,2], w_r=data$true_pis[,3], esize=data$eps,
                        alpha=0.05, m=length(data$Z))
 rej_R = oracle_procedure(data$Z, data$densities, data$null_probs, alpha=0.05)

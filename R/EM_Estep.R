@@ -1,6 +1,5 @@
 # w0, w K-1.
 R_EM_Estep <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2) {
-    stopifnot(all(sigma2 > 0))
     # At qth EM iteration, during the th ZAP iteration,
     # compute E-step estimates D0, D1, D2 for each ik.
 
@@ -21,7 +20,7 @@ R_EM_Estep <- function(Zs, is_masked, X_f, w_f, beta_f, sigma2) {
         } else {
             out <- R_unmasked_moments(Zs[i,1], pis[i,], mu, sigma)
         }
-        D0[i,] <- out[,1]
+        D0[i,] <- out[,1]  # out is now [K,3]
         D1[i,] <- out[,2]
         D2[i,] <- out[,3]
     }
@@ -45,7 +44,7 @@ R_masked_moments <- function(zs, pi, mu, sigma) {
     if(any(is.na(D0)) | any(is.na(D1)) | any(is.na(D2))) {
         browser()
     }
-    return(matrix(c(D0, D1, D2), nrow=3, byrow=F))
+    return(matrix(c(D0, D1, D2), ncol=3, byrow=F))
 }
 
 # Works on SINGLE INSTANCES
@@ -55,7 +54,7 @@ R_unmasked_moments <- function(z, pi, mu, sigma) {
     D0 <- products / rowSums(products)
     D1 <- D0 * z
     D2 <- D0 * z^2
-    return(matrix(c(D0, D1, D2), nrow=3, byrow=F))
+    return(matrix(c(D0, D1, D2), ncol=3, byrow=F))
 }
 
 # Works on ALL INSTANCES

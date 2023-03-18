@@ -1,12 +1,15 @@
 test_that("Failure to converge is reported", {
-    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0.3))
-    expect_warning(EM_run(data$Zs, data$is_masked, data$X_f, data, data, maxit=2, tol=1e-6,
-                     use_proximal_newton=F, use_cpp=T, verbose=F), regexp="DID NOT CONVERGE")
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, K=3, mask_prop=0.3))
+    data <- append(data, list(
+        maxit=2, tol=1e-6, use_proximal_newton=F,
+        use_cpp=T, EM_verbose=F
+    ))
+    expect_warning(EM_run(data, data, data), regexp="DID NOT CONVERGE")
 })
 
 test_that("Both marginal_CD objectives agree on equal-variance, unmasked data", {
-    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
-    data$sigma2 <- rep(data$sigma2[1], data$K)
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, K=3, mask_prop=0))
+    data$sigma2 <- rep(5, data$K)
     k <- 2
 
     D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
@@ -15,13 +18,13 @@ test_that("Both marginal_CD objectives agree on equal-variance, unmasked data", 
     cust_obj <- obj_expert(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
                            data$beta_f[,k], data$sigma2[k], data$lambda[k])
     orig_obj <- obj_gating(data$Zs[,1], data$X_f, D$D0[,k], data$beta_f[,k],
-                           gammak = data$sigma[k] * data$lambda[k])
+                           gammak = data$sigma2[k] * data$lambda[k])
     expect_equal(cust_obj, orig_obj)
 })
 
 test_that("Both marginal_CD functions agree on equal-variance, unmasked data", {
-    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
-    data$sigma2 <- rep(data$sigma2[1], data$K)
+    data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, K=3, mask_prop=0))
+    data$sigma2 <- rep(5, data$K)
     k <- 2
 
     D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
@@ -31,7 +34,7 @@ test_that("Both marginal_CD functions agree on equal-variance, unmasked data", {
                                        data$beta_f[,k], data$sigma2[k],
                                        data$lambda[k])
     orig_out <- weight_marginal_CD(data$Zs[,1], data$X_f, D$D0[,k], data$beta_f[,k],
-                                   gammak = data$sigma[k] * data$lambda[k])
+                                   gammak = data$sigma2[k] * data$lambda[k])
 
     # HDME for comparison
     if (F) {
@@ -49,21 +52,18 @@ test_that("Both marginal_CD functions agree on equal-variance, unmasked data", {
 if (F) {
     # KEPT FOR POSTERITY.
     test_that("Degenerate 3rd expert (and NaN production) at 1e-5 tol near conv.", {
-        # The TC I can live with, but need to confirm whether degeneracy ok
-        # A: Well, the pis are small!!
-        # Q: Well, does this behaviour vary by initialisation? Dataset?
-        data <- withr::with_seed(5, make_test_EM_iteration_instance(n=2500, mask_prop=0.3))
-        out <- withr::with_seed(5, EM_run(data$Zs, data$is_masked, data$X_f,
-                                          params_init=data, hyp_params=data,
-                                          use_proximal_newton=TRUE,
-                                          verbose=FALSE, maxit=500, tol=1e-4))
+        data <- withr::with_seed(5, make_test_EM_iteration_instance(n=2500, K=3, mask_prop=0.3))
+        data <- append(data, list(
+            maxit=500, tol=1e-5, use_cpp=F, use_proximal_newton=T, EM_verbose=T
+        ))
+        out <- withr::with_seed(5, EM_run(data, data, data))
     })
 
     test_that("M-step (Gating) Methods 1, 2 agree unmasked", {
         # IGNORED. Doesn't seem reasonable, considering they ask to maximise diff. data
 
         # load test data
-        data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0))
+        data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, K=3, mask_prop=0))
 
         # ZAP2
         D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
@@ -76,7 +76,7 @@ if (F) {
 
     test_that("M-step (Gating) Methods 1, 2 agree with masking", {
         # load MASKED test data
-        data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, mask_prop=0.3))
+        data <- withr::with_seed(2, make_test_EM_iteration_instance(n=1000, K=3, mask_prop=0.3))
 
         # ZAP2
         D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,

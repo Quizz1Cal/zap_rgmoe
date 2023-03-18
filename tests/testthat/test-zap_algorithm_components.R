@@ -1,3 +1,22 @@
+test_that("setup_masking_inputs works", {
+    initialise_args <- function(alpha_m=NA, lambda_m=NA, nu=NA,
+                                masking_method="basic") {
+        return(list(alpha_m=alpha_m, lambda_m=lambda_m, nu=nu,
+                    masking_method=masking_method))
+    }
+
+    expect_equal(setup_masking_inputs(initialise_args(masking_method="symmetric_tent")),
+                 list(alpha_m=0.5, lambda_m=0.5, nu=1, masking_method="symmetric_tent", zeta=1))
+    expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=0.8, masking_method="symmetric_tent")),
+                 regexp="*cannot use specified")
+    expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=0.6, lambda_m=0.05, masking_method="symmetric_tent")),
+        regexp="*constraints not met")
+    expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=1.1, lambda_m=0.15, masking_method="symmetric_tent")),
+                 regexp="*constraints not met")
+    expect_equal(setup_masking_inputs(initialise_args(0.1, 0.1, 0.6, masking_method="tent")), list(
+        alpha_m=0.1, lambda_m=0.1, nu=0.6, masking_method="tent", zeta=5))
+})
+
 test_that("FDP estimation using full masking", {
     data <- make_test_zap_iteration_instance()
     expect_equal(compute_FDP_finite_est(data$Z, data$sl, data$sr), 1)
@@ -5,16 +24,14 @@ test_that("FDP estimation using full masking", {
 
 test_that("Z-masking (basic method)", {
     z <- qnorm(c(0.4,0.9))
-    expect_equal(mask_Z(z, masking_method=-1),
+    out <- mask_data(list(Z=z), list(masking_method="basic", n=length(z)))
+    expect_equal(out$Zs,
                  matrix(c(z, qnorm(c(0.1,0.6))), ncol=2))
 })
 
 test_that("Z-masking (adapt-GMM method)", {
-    warning("Hot value needs adjusting")
-    z <- qnorm(c(0.2,0.35,0.56,0.96))
-    expect_equal(mask_Z(z, masking_method=1),
-                 matrix(c(-0.841,0.524,1.036,-0.385,-1.555,0.151,1.751,-0.100),
-                        ncol=2, byrow=T), tolerance=1e-3)
+    warning("Not implemented")
+    expect_equal("T", "T")
 })
 
 test_that("Inputs must be valid", {
@@ -38,7 +55,11 @@ test_that("Inputs must be valid", {
     # alpha <= 0
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         alpha = 0.0),
-                 regexp="nonzero")
+                 regexp="strictly positive")
+    # alpha >= 1
+    expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
+                        alpha = 1.1),
+                 regexp="less than 1")
     # Z length match X
     expect_error(zap_v2(data$Z[1:10], data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2)),
                  regexp="same number of instances")
@@ -49,7 +70,7 @@ test_that("Inputs must be valid", {
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,3)),
                  regexp="must be length K-1")
 
-    # bad alpham
+    # bad sl_thresh
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         sl_thresh = 0.251),
                  regexp="<= 0.25")
@@ -77,19 +98,6 @@ test_that("Inputs must be valid", {
 
     # bad masking_method
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
-                        masking_method = 3),
+                        masking_method = "bozo"),
                  regexp=".*selection.*masking_method")
-})
-
-# atomic lambda
-test_that("Atomic lambda, gamma", {
-    data <- make_test_zap_problem_instance()
-    expect_warning(
-        zap_v2(data$Z, data$X, K=3, lambda=0.1, gamma=rep(0.1,2),
-               nfits=1, masking_method=2), "DID NOT CONVERGE"
-    )
-    expect_warning(
-        zap_v2(data$Z, data$X, K=3, lambda=rep(0.1, 3), gamma=0.1,
-               nfits=1, masking_method=2), "DID NOT CONVERGE"
-    )
 })

@@ -18,8 +18,7 @@ test_that("HDME Log-likelihood matches ZAP on unmasked, equal-variance data", {
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
     # ZAP
-    loglik_zap2 <- loglik(data$Zs, data$is_masked, data$X_f, data$w_f,
-                          data$beta_f, data$sigma2, data$gamma, data$lambda)
+    loglik_zap2 <- loglik(data, params=data, args=data)
 
     # HDME
     loglik_hdme <- RMoE:::GLOG(X=data$X_f, Y=data$Zs[,1], wk=t(data$w_f),
@@ -35,7 +34,7 @@ test_that("CoorLQk (wt. w) matches ZAP on unmasked, equal-variance data", {
     data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
     # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
     data$sigma2 <- rep(data$sigma2[1], data$K)
-    k <- 2
+    k <- data$K - 1
 
     # ZAP
     D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
@@ -106,7 +105,7 @@ test_that("Obj (Gating) matches ZAP on unmasked, equal-variance data", {
         data <- withr::with_seed(seed=s, make_test_EM_iteration_instance(mask_prop=0))
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
-        for (k in 1:2) {
+        for (k in 1:(data$K-1)) {
             # ZAP
             D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                           data$sigma2)
@@ -237,15 +236,17 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
 
     for (i in c(13,14)) {
         # load unmasked test data
-        data <- withr::with_seed(i, make_test_EM_iteration_instance(mask_prop=0))
+        data <- withr::with_seed(i, make_test_EM_iteration_instance(K=3, mask_prop=0))
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
+        data$maxit <- 200
+        data$use_proximal_newton <- F
+        data$use_cpp <- F
+        data$EM_verbose <- F
+        data$tol <- 1e-4
 
-        zap_params <- EM_run(data$Zs, data$is_masked, data$X_f, data, data,
-                             maxit=200, use_proximal_newton=F, use_cpp=F, verbose=FALSE)
-        zap_loglik <- loglik(data$Zs, data$is_masked, data$X_f, zap_params$w_f,
-                             zap_params$beta_f, zap_params$sigma2, gamma=data$gamma,
-                             lambda=data$lambda)
+        zap_params <- EM_run(data, model_init=data, args=data)
+        zap_loglik <- loglik(data, zap_params, args=data)
 
         hdme_params <- withr::with_seed(1,
                 RMoE::GaussRMoE(data$X_f, data$Zs[,1], data$K, data$lambda,

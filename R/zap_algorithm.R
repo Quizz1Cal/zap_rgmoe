@@ -12,36 +12,18 @@
 zap_v2 <- function(Z, X, K, lambda, gamma,
                    alpha=0.05, sl_thresh=0.2,
                    maxit=50,
-                   masking_method=-1, # TODO: ALTER
+                   masking_method="basic", # TODO: ALTER,
+                   alpha_m=NA, nu=NA, lambda_m=NA,  # adapt-GMM
                    tol=1e-4,
                    nfits=50,
+                   use_cpp=TRUE,
                    use_proximal_newton=FALSE,
                    zap_verbose=FALSE, EM_verbose=FALSE) {
-    # Error parsing
-    if (!is.numeric(Z) | any(is.na(Z))) {stop("Invalid `Z` values")}
-    if (!is.numeric(X) | any(is.na(X))) {stop("Invalid `X` values")}
-    if (!is.numeric(K) | K %% 1 != 0 | K < 1) {stop("`K` must be a positive integer")}
-    if (!is.numeric(gamma) | any(is.na(gamma))) {stop("Invalid `gamma` value(s)")}
-    if (!is.numeric(lambda) | any(is.na(lambda))) {stop("Invalid `lambda` value(s)")}
-    if(alpha <= 0) stop("alpha must be nonzero")
-    if(sl_thresh <=0 | sl_thresh > 0.25) stop("0 < `sl_thresh` <= 0.25")
-    if(!is.numeric(tol) | tol <= 0) stop("`tol` must be strictly positive")
-    if (!is.numeric(nfits) | nfits %% 1 != 0 | nfits < 1) {
-        stop("`nfits` must be a positive integer")
-        }
-    if (!is.numeric(maxit) | maxit %% 1 != 0 | maxit < 1) {
-        stop("`maxit` must be a positive integer")
-    }
 
-    if (is.vector(X)) {
-        X_len = length(X)
-    } else if (is.array(X) | is.data.frame(X)) {
-        X_len = dim(X)[1]
-    } else {stop("`X` must be a vector, array, matrix, or data frame object")}
-    if(X_len != length(Z)) {
-        stop("`Z` and `X` must have the same number of instances")
-    }
-
+    # TODO: Add new masking/etc. to this function
+    validate_inputs(Z, X, K, lambda, gamma, alpha, sl_thresh,
+                     maxit, masking_method, tol, nfits)
+    # Check + set lambda, gamma
     if (length(lambda) == 1) {
         # print(paste0("Setting lambda=", lambda, "for all expert penalties"))
         lambda = rep(lambda, K)
@@ -54,26 +36,45 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     } else {
         if(length(gamma)!=K-1) stop("`gamma` vector must be length K-1")
     }
-    if (!(masking_method %in% c(-1,1,2))) {
-        stop("Invalid selection for `masking_method`")
-        # TODO: formalise, write test cases
-    }
 
-
-    # Initialisation
+    # Collate hyper-parameters
     n <- length(Z)
     p <- dim(X)[2]
-    masked_Z <- mask_Z(Z, masking_method=masking_method)
-    masked_set <- 1:n # set of indices of masked data
-    X_f <- as.matrix(cbind(rep(1,n), X))
+    args <- list(n=n, p=p, K=K,
+                 lambda=lambda, gamma=gamma,
+                 alpha=alpha, sl_thresh=sl_thresh,
+                 maxit=maxit, masking_method=masking_method,
+                 alpha_m=alpha_m, nu=nu, lambda_m=lambda_m,
+                 tol=tol, nfits=nfits,
+                 use_cpp=use_cpp, use_proximal_newton=use_proximal_newton,
+                 zap_verbose=zap_verbose, EM_verbose=EM_verbose)
+    args <- setup_masking_inputs(args)
 
-    # Specific params, hyperparams for model
-    model_params <- list(w_f=matrix(0, nrow=p+1, ncol=K-1),
+    # Collate model parameters
+    model_params <- withr::with_seed(1, list(w_f=matrix(0, nrow=p+1, ncol=K-1),
                          beta_f=matrix(0, nrow=p+1, ncol=K),
-                         sigma2=stats::runif(K, min=1, max=5))
-    hyp_params <- list(K=K, p=p, lambda=lambda, gamma=gamma)
+                         sigma2=stats::runif(K, min=1, max=5)))
+
+    # Collate data
+    X_f <- make_X_f(X)
+    data <- list(Z=Z, X=X, X_f=X_f)
+    data <- mask_data(data, args)  # adds Z_b0, Z_b1, and is_masked tracker
+
+    # Ideal: data$Zs[data$is_masked, -1] for masked data
+    # and data$Zs[!data$is_masked, 1] for unmasked data
+
+    # Additional setup (to refactor)
+    if (masking_method == "tent" | masking_method == "symmetric_tent") {
+        args$estimate_q <- adapt_gmm_estimate_q
+    } else if (masking_method == "basic") {
+        args$estimate_q <- basic_estimate_q
+    }
+
+    # NOTE TO SELF: note is_masked is specifically for EM_run
+    # I infer masked_set from this, which is used in ZAP algorithm.
 
     # Initialise variables for masking procedure
+    masked_set = which(data$is_masked)
     sl <- sl_thresh * (1:n %in% masked_set)
     sr <- 1 - sl
     FDP_t <- compute_FDP_finite_est(Z, sl, sr)
@@ -87,18 +88,12 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
 
         # Re-fit the RGMOE model every (n %% nfits)-iterations
         if (t %% (n %/% nfits) == 0) {
-            is_masked <- 1:n %in% masked_set
-            model_params <- EM_run(masked_Z, is_masked, X_f,
-                                   params_init=model_params,
-                                   hyp_params=hyp_params,
-                                   maxit=maxit,
-                                   tol=tol,
-                                   use_proximal_newton=use_proximal_newton,
-                                   verbose=EM_verbose)
+            data$is_masked <- 1:n %in% masked_set
+            model_params <- EM_run(data, model_init=model_params, args=args)
         }
 
-        # unmask data with best q
-        q_est <- q_estimates(masked_Z, X_f, model_params)
+        # unmask data with best q using the correct q_estimate formula
+        q_est <- args$estimate_q(data, model_params, args)
         masked_set <- update_masked_set(masked_set, q_est)
 
         # Compute new estimates

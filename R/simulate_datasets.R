@@ -53,9 +53,9 @@ make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000) {
     p.vals <- 2*pnorm(-abs(Z))
 
     return(list(name=paste("ZAP Simulated Data - Setup: ", setup),
-                Z=Z, X=X, p.vals=p.vals, delta=delta, true_pis=true_pis,
+                Z=Z, X=X, X_f=make_X_f(X), p=p, n=n, K_true=K, p.vals=p.vals, delta=delta, true_pis=true_pis,
                 null_probs=true_pis[,1], is_null=is_null, densities=densities,
-                eta=eta, zeta=zeta, eps=eps, sigma=sigma,
+                eta=eta, zeta_true=zeta, eps=eps, sigma_true=sigma,
                 mu.r=mu.r, mu.l=mu.l))
 }
 

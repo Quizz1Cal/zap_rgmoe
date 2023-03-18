@@ -16,7 +16,7 @@ test_that("E-step Unmasked instance D matches", {
 
     pi_cpp <- cpp_pi_matrix(data$X_f, data$w_f)
     D_cpp <- cpp_unmasked_moments(data$Zs[i,1], pi_cpp[i,], mu, sqrt(data$sigma2))
-    expect_equal(D_R, D_cpp)  # NOTE TRANSPOSE
+    expect_equal(D_R, D_cpp)
 })
 
 test_that("E-step Masked instance D matches", {
@@ -29,7 +29,7 @@ test_that("E-step Masked instance D matches", {
 
     pi_cpp <- cpp_pi_matrix(data$X_f, data$w_f)
     D_cpp <- cpp_masked_moments(data$Zs[i,], pi_cpp[i,], mu, sqrt(data$sigma2))
-    expect_equal(D_R, D_cpp)  # NOTE TRANSPOSE
+    expect_equal(D_R, D_cpp)
 })
 
 test_that("Full E-step matches", {

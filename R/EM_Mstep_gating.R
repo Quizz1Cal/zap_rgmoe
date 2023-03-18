@@ -78,7 +78,12 @@ R_obj_gating <- function(Y, X_f, tau, wk_f, gammak) {
 
 # The Q(w; theta) gating component of the Q-function
 R_Fs <- function(X_f, tau, w_f, gamma) {
-    w_1norm = colSums(abs(w_f[-1,]))
+    if (dim(tau)[2] > 2) {
+        w_1norm = colSums(abs(w_f[-1,]))
+    } else {
+        w_1norm = sum(abs(w_f[-1,]))
+    }
+
     pis <- R_pi_matrix(X_f, w_f)
     stopifnot(all(pis >= 0))
     S0 = sum(tau*log(pis))
