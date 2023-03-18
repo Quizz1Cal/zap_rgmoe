@@ -5,11 +5,12 @@ test_that("FDP estimation using full masking", {
 
 test_that("Z-masking (basic method)", {
     z <- qnorm(c(0.4,0.9))
-    expect_equal(mask_Z(z, masking_method=2),
+    expect_equal(mask_Z(z, masking_method=-1),
                  matrix(c(z, qnorm(c(0.1,0.6))), ncol=2))
 })
 
-test_that("Z-masking (adapt method)", {
+test_that("Z-masking (adapt-GMM method)", {
+    warning("Hot value needs adjusting")
     z <- qnorm(c(0.2,0.35,0.56,0.96))
     expect_equal(mask_Z(z, masking_method=1),
                  matrix(c(-0.841,0.524,1.036,-0.385,-1.555,0.151,1.751,-0.100),
@@ -50,10 +51,10 @@ test_that("Inputs must be valid", {
 
     # bad alpham
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
-                        alpha_m = 0.251),
+                        sl_thresh = 0.251),
                  regexp="<= 0.25")
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
-                        alpha_m = 0),
+                        sl_thresh = 0),
                  regexp="0 <")
     # bad tol
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),

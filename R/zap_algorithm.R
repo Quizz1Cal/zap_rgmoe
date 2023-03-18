@@ -4,15 +4,15 @@
 #' @param alpha targeted FDR level.  Default to 0.05.
 #' @param maxit maximum number of iterations for every EM update
 #' @param nfits maximum number of EM updates during the procedure... DEFAULT?
-#' @param alpha_m Hyperparameter for non-interactive threshold
+#' @param sl_thresh Hyperparameter for non-interactive threshold
 #' @param use_proximal_newton If TRUE, uses Proximal Newton Method; else Proximal Newton-type.
 #'
 #' @return Vector of indices for samples to reject
 #' @export
 zap_v2 <- function(Z, X, K, lambda, gamma,
-                   alpha=0.05, alpha_m=0.2,
+                   alpha=0.05, sl_thresh=0.2,
                    maxit=50,
-                   masking_method=1,
+                   masking_method=-1, # TODO: ALTER
                    tol=1e-4,
                    nfits=50,
                    use_proximal_newton=FALSE,
@@ -24,7 +24,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     if (!is.numeric(gamma) | any(is.na(gamma))) {stop("Invalid `gamma` value(s)")}
     if (!is.numeric(lambda) | any(is.na(lambda))) {stop("Invalid `lambda` value(s)")}
     if(alpha <= 0) stop("alpha must be nonzero")
-    if(alpha_m <=0 | alpha_m > 0.25) stop("0 < `alpha_m` <= 0.25")
+    if(sl_thresh <=0 | sl_thresh > 0.25) stop("0 < `sl_thresh` <= 0.25")
     if(!is.numeric(tol) | tol <= 0) stop("`tol` must be strictly positive")
     if (!is.numeric(nfits) | nfits %% 1 != 0 | nfits < 1) {
         stop("`nfits` must be a positive integer")
@@ -54,8 +54,9 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     } else {
         if(length(gamma)!=K-1) stop("`gamma` vector must be length K-1")
     }
-    if (!(masking_method %in% 1:2)) {
+    if (!(masking_method %in% c(-1,1,2))) {
         stop("Invalid selection for `masking_method`")
+        # TODO: formalise, write test cases
     }
 
 
@@ -72,8 +73,8 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
                          sigma2=stats::runif(K, min=1, max=5))
     hyp_params <- list(K=K, p=p, lambda=lambda, gamma=gamma)
 
-    # Initialise variables for procedure
-    sl <- alpha_m * (1:n %in% masked_set)
+    # Initialise variables for masking procedure
+    sl <- sl_thresh * (1:n %in% masked_set)
     sr <- 1 - sl
     FDP_t <- compute_FDP_finite_est(Z, sl, sr)
 
@@ -91,6 +92,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
                                    params_init=model_params,
                                    hyp_params=hyp_params,
                                    maxit=maxit,
+                                   tol=tol,
                                    use_proximal_newton=use_proximal_newton,
                                    verbose=EM_verbose)
         }
@@ -100,7 +102,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
         masked_set <- update_masked_set(masked_set, q_est)
 
         # Compute new estimates
-        sl <- alpha_m * (1:n %in% masked_set)
+        sl <- sl_thresh * (1:n %in% masked_set)
         sr <- 1 - sl
         FDP_t <- compute_FDP_finite_est(Z, sl, sr)
 
@@ -139,54 +141,4 @@ compute_FDP_finite_est <- function(Z, sl, sr) {
 select_rejections <- function(Z, sl, sr) {
     U <- stats::pnorm(Z)
     return(which(U <= sl | U >= sr))
-}
-
-mask_Z <- function(Z, masking_method) {
-    if (masking_method == 1) {
-        stop("Package not capable of masking Z into two values")
-        p <- 2*stats::pnorm(-abs(Z))
-        m <- pmin(p, 1-p)
-        b <- (p >= 1-p)
-        gamma <- sign(Z)*(-1)^b
-        qnorms <- gamma * qnorm(cbind(1-m/2, 0.5+m/2))
-        masked_Z <- matrix(c(qnorms[,1], -qnorms[,2]), ncol=2)
-        return(masked_Z)
-    } else if (masking_method == 2) {
-        # Retained for posterity. The masking procedure in ZAP
-        U <- stats::pnorm(Z)
-        Uhat <- (1.5-U)*(U > 0.5) + (0.5-U)*(U <= 0.5)
-        return(matrix(c(Z, stats::qnorm(Uhat)), ncol=2))
-    }
-}
-
-# Computes qhat_t (a vector of q-estimates for each i, at ZAP iteration t)
-# At each t, should reject i with maximum q_estimate
-# TODO: I was scaling before. Now I am not. Confirm, 100%, Z is assumed scaled/dealt with.
-q_estimates <- function(Z_pairs, X_f, params) {
-    w_f <- params$w_f
-    beta_f <- params$beta_f
-    sigma2 <- params$sigma2
-
-    n <- dim(X_f)[1]
-    pis <- R_pi_matrix(X_f, w_f)
-    mu <- X_f %*% beta_f
-
-    dZ <- c()
-    dmaskZ <- c()
-    for (i in 1:n) {
-        dZ[i] <- sum(pis[i,] * stats::dnorm(Z_pairs[i,1], mu[i,], sqrt(sigma2)))
-        dmaskZ[i] <- sum(pis[i,] * stats::dnorm(Z_pairs[i,2], mu[i,], sqrt(sigma2)))
-    }
-
-    output <- dZ / (dZ + dmaskZ)
-    return(output)
-}
-
-update_masked_set <- function(masked_set, q_est) {
-    # unmask pair with best q (taking random choice if a tie)
-    # TODO: Do ties even occur?
-    stopifnot(length(masked_set) >= 1)
-    i_bests <- masked_set[which.max.with_ties(q_est[masked_set])]
-    to_unmask <- i_bests[sample(length(i_bests), size=1)]
-    return(masked_set[masked_set != to_unmask])
 }

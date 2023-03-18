@@ -30,7 +30,7 @@ make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1,
     X <- problem_instance$X
     X_f=make_X_f(X)
 
-    Zs <- mask_Z(Z, masking_method=2)
+    Zs <- mask_Z(Z, masking_method=-1)
     n <- dim(X)[1]
     p <- dim(X)[2]
     n_masked <- round(n*mask_prop)
