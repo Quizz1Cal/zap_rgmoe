@@ -11,14 +11,19 @@ zap_v2(
   lambda,
   gamma,
   alpha = 0.05,
-  alpha_m = 0.2,
-  maxit = 50,
-  masking_method = 1,
-  tol = 1e-04,
   nfits = 50,
+  masking_method = "basic",
+  sl_thresh = 0.2,
+  alpha_m = NA,
+  nu = NA,
+  lambda_m = NA,
+  tol = 1e-04,
+  maxit = 50,
+  use_cpp = TRUE,
   use_proximal_newton = FALSE,
+  EM_verbose = FALSE,
   zap_verbose = FALSE,
-  EM_verbose = FALSE
+  seed = 1
 )
 }
 \arguments{
@@ -28,11 +33,11 @@ zap_v2(
 
 \item{alpha}{targeted FDR level.  Default to 0.05.}
 
-\item{alpha_m}{Hyperparameter for non-interactive threshold}
+\item{nfits}{maximum number of EM updates during the procedure... DEFAULT?}
+
+\item{sl_thresh}{Hyperparameter for non-interactive threshold}
 
 \item{maxit}{maximum number of iterations for every EM update}
-
-\item{nfits}{maximum number of EM updates during the procedure... DEFAULT?}
 
 \item{use_proximal_newton}{If TRUE, uses Proximal Newton Method; else Proximal Newton-type.}
 }

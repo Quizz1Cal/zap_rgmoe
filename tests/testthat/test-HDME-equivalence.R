@@ -4,7 +4,7 @@ test_that("Pi computations match ZAP on unmasked, equal-variance data", {
     # load unmasked test data
     data <- withr::with_seed(1, make_test_EM_iteration_instance(mask_prop=0))
 
-    pi_zap <- pi_matrix(data$X_f, data$w_f)
+    pi_zap <- cpp_pi_matrix(data$X_f, data$w_f)
     pi_hdme <- RMoE:::Pik(data$n, data$K, X=data$X_f, wk=t(data$w_f))
     expect_equal(pi_zap, pi_hdme, ignore_attr=TRUE, tolerance=1e-9)
 })
@@ -37,9 +37,9 @@ test_that("CoorLQk (wt. w) matches ZAP on unmasked, equal-variance data", {
     k <- data$K - 1
 
     # ZAP
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
-    data_zap2 <- weight_marginal_CD(data$Zs[,1], data$X_f, D$D0[,k],
+    data_zap2 <- cpp_weight_marginal_CD(data$Zs[,1], data$X_f, D$D0[,k],
                                     data$w_f[,k], data$gamma[k])
 
     # HDME
@@ -61,9 +61,9 @@ test_that("CoorLQk (wt. Beta) reconciles with ZAP on unmasked, equal-variance da
     k <- 1
 
     # ZAP
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
-    update_zap2 <- beta_marginal_CD(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
+    update_zap2 <- cpp_beta_marginal_CD(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
                               data$beta_f[,k], data$sigma2[k], data$lambda[k])
 
     # HDME
@@ -84,7 +84,7 @@ test_that("HDME E-step matches ZAP on unmasked, equal-variance data", {
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
     # Run new E-step
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
     tau_zap2 <- D$D0
 
@@ -107,9 +107,9 @@ test_that("Obj (Gating) matches ZAP on unmasked, equal-variance data", {
         data$sigma2 <- rep(data$sigma2[1], data$K)
         for (k in 1:(data$K-1)) {
             # ZAP
-            D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+            D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                           data$sigma2)
-            obj_zap[s,k] <- obj_gating(data$Zs[,1], data$X_f, D$D0[,k],
+            obj_zap[s,k] <- cpp_obj_gating(data$Zs[,1], data$X_f, D$D0[,k],
                                        data$w_f[,k], data$gamma[k])
 
             # HDME
@@ -133,9 +133,9 @@ test_that("Obj (Expert) matches ZAP on unmasked, equal-variance data", {
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
         for (k in 1:2) {
-            D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+            D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                           data$sigma2)
-            obj_exp_zap[s,k] <- obj_expert(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
+            obj_exp_zap[s,k] <- cpp_obj_expert(data$X_f, D$D0[,k], D$D1[,k], D$D2[,k],
                                       data$beta_f[,k], data$sigma2[k],
                                       data$lambda[k])
             #hdme
@@ -159,10 +159,10 @@ test_that("HDME M-step (Gating) matches ZAP on unmasked, equal-variance data", {
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
     # ZAP2
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
-    zap_M1 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, TRUE)
-    zap_M2 <- gating_update(data$X_f, D$D0, data$w_f, data$gamma, FALSE)
+    zap_M1 <- cpp_gating_update(data$X_f, D$D0, data$w_f, data$gamma, TRUE)
+    zap_M2 <- cpp_gating_update(data$X_f, D$D0, data$w_f, data$gamma, FALSE)
     wk_M1_zap2_hdme_fmt <- t(zap_M1)
     wk_M2_zap2_hdme_fmt <- t(zap_M2)
 
@@ -186,9 +186,9 @@ test_that("HDME M-step (Expert, beta) reconciles with ZAP on unmasked, equal-var
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
     # ZAP2
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
-    beta_zap2_hdme_fmt <- beta_update(data$X_f, D$D0, D$D1, D$D2, data$beta_f,
+    beta_zap2_hdme_fmt <- cpp_beta_update(data$X_f, D$D0, D$D1, D$D2, data$beta_f,
                             data$sigma2, data$lambda)
 
     # HDME
@@ -213,9 +213,9 @@ test_that("HDME M-step (Expert, sigma2) matches ZAP on unmasked, equal-variance 
     data$sigma2 <- rep(data$sigma2[1], data$K)
 
     # ZAP
-    D <- EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
+    D <- cpp_EM_Estep(data$Zs, data$is_masked, data$X_f, data$w_f, data$beta_f,
                   data$sigma2)
-    sigma2_zap2 <- sigma2_update(data$X_f, D$D0, D$D1, D$D2, data$beta_f)
+    sigma2_zap2 <- cpp_sigma2_update(data$X_f, D$D0, D$D1, D$D2, data$beta_f)
     sigma2_inferred_zap2 <- sum(sigma2_zap2 * colSums(D$D0)) / data$n
 
     # HDME
@@ -239,10 +239,10 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
         data <- withr::with_seed(i, make_test_EM_iteration_instance(K=3, mask_prop=0))
         # Alter so that sigma2 is 'same' for all experts (limitation of RMoE)
         data$sigma2 <- rep(data$sigma2[1], data$K)
-        data$maxit <- 200
+        data$maxit <- 1300 # 200 works for squarem
         data$use_proximal_newton <- F
         data$use_cpp <- F
-        data$EM_verbose <- F
+        data$EM_verbose <- T
         data$tol <- 1e-4
 
         zap_params <- EM_run(data, model_init=data, args=data)

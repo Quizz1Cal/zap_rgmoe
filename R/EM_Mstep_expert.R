@@ -48,7 +48,9 @@ R_sigma2_update <- function(X_f, D0, D1, D2, beta_f) {
         y_preds <- X_f%*%beta_f[,k]
         numerator <- sum(D2[,k]) -2*D1[,k]%*%y_preds +sum(D0[,k]*(y_preds)^2)
         sigma2[k] <- (eps+numerator) / (eps+sum(D0[,k]))
-        stopifnot(sigma2[k] > 0)
+        if (is.na(sigma2[k]) | sigma2[k] <= 0) {
+            stop("Invalid sigma computed")
+        }
     }
     return(sigma2)
 }

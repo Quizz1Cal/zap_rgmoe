@@ -7,9 +7,11 @@ make_test_zap_iteration_instance <- function() {
     return(list(Z=Z, sl=sl, sr=sr, sl_masked=sl_masked, sr_masked=sr_masked))
 }
 
+# TODO: Feels redundant.
 make_test_zap_problem_instance <- function(n=500) {
     dataset <- make_zap_simulated_dataset(setup=1, eta=-2, zeta=3, eps=2.1,
                                           sigma=1, n=n)
+    return(dataset)
 }
 
 make_test_EM_parameter_instance <- function(p, K) {

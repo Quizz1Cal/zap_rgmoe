@@ -35,33 +35,52 @@ test_that("EM_run matches (masked, Proximal)", {
     expect_equal(data_R, data_cpp, tolerance=1e-6)
 })
 
+if (T) {
+    test_that("EM_run matches (masked, Proximal-Type)", {
+        data <- readRDS(test_path("fixtures", "EM_run_K_3_mask_0.4_Rcpp_equiv_test.rds"))
+        data$Z <- data$Zs[,1]
+        data$use_cpp <- T
+        data$use_proximal_newton <- F
+        data$EM_verbose <- F
+        data$maxit <- 1500
+        data$tol <- 1e-4
+
+        data_cpp <- EM_run(data, model_init=data, args=data) # Squarem-designed
+        data$use_cpp <- F
+        data_R <- EM_run(data, model_init=data, args=data)  # Squarem-designed
+        expect_equal(data_R, data_cpp, tolerance=1e-8)
+    })
+}
+
 # CURRENTLY PLACEHOLDER TO BENCHMARK ACCURACY
-test_that("EM_run matches (masked, Proximal-Type)", {
-    data <- withr::with_seed(3, make_test_EM_iteration_instance(mask_prop=0.4))
-    data$use_cpp <- T
-    data$use_proximal_newton <- F
-    data$EM_verbose <- F
-    data$maxit <- 250
-    data$tol <- 1e-4
-
-    data_cpp <- EM_run(data, model_init=data, args=data)
-    data$use_cpp <- F
-    data_R <- EM_run(data, model_init=data, args=data)
-    expect_equal(data_R, data_cpp, tolerance=1e-8)
-})
-
 if (F) {
+    test_that("EM_run matches (masked, Proximal-Type)", {
+        data <- readRDS(test_path("fixtures", "EM_run_K_3_mask_0.4_Rcpp_equiv_test.rds"))
+        data$Z <- data$Zs[,1]
+        data$use_cpp <- T
+        data$use_proximal_newton <- F
+        data$EM_verbose <- F
+        data$maxit <- 250  # 3000 (not inf) works for fpiter
+        data$tol <- 1e-4
+
+        data_cpp <- EM_run(data, model_init=data, args=data) # Squarem-designed
+        data$use_cpp <- F
+        data_R <- EM_run(data, model_init=data, args=data)  # Squarem-designed
+        expect_equal(data_R, data_cpp, tolerance=1e-8)
+    })
+
     test_that("EM_run matches (unmasked, test2)", {
         # (18.03.2023 commit) Seems to freeze on K=2, squarem
-        data <- withr::with_seed(14, make_test_EM_iteration_instance(mask_prop=0, K=2))
+        data <- readRDS(test_path("fixtures", "EM_run_K_3_unmasked_Rcpp_equiv_test.rds"))
+        data$Z <- data$Zs[,1]
         data$maxit <- 200
         data$use_cpp <- F
         data$use_proximal_newton <- T
-        data$EM_verbose <- T
+        data$EM_verbose <- F
         data$tol <- 1e-4
-        data_R <- EM_run(data, model_init=data, args=data)
+        data_R <- EM_run(data, model_init=data, args=data)  # Squarem-designed
         data$use_cpp <- T
-        data_cpp <- EM_run(data, model_init=data, args=data)
+        data_cpp <- EM_run(data, model_init=data, args=data)  # Squarem-designed
         expect_equal(data_R, data_cpp, tolerance=1e-10)
     })
 }

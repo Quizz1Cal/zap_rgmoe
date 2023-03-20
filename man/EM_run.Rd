@@ -4,25 +4,7 @@
 \alias{EM_run}
 \title{Title}
 \usage{
-EM_run(
-  Zs,
-  is_masked,
-  X_f,
-  params_init,
-  hyp_params,
-  maxit,
-  tol = 1e-04,
-  use_cpp = FALSE,
-  use_proximal_newton = FALSE,
-  verbose = FALSE
-)
-}
-\arguments{
-\item{params_init}{list of initial values for parameters (w_f, beta_f, sigma2)}
-
-\item{hyp_params}{list of fixed hyperparameter values (K, p, lambda, gamma)}
-
-\item{use_proximal_newton}{If TRUE, uses Proximal Newton Method; else Proximal Newton-type.}
+EM_run(data, model_init = model_params, args = args)
 }
 \value{
 list of parameter estimates (w_f, beta_f, sigma2)

@@ -1,8 +1,7 @@
 # Log likelihood
-# TODO: TEST
 loglik <- function(data, params, args) {
 
-    pis <- pi_matrix(data$X_f, params$w_f)
+    pis <- cpp_pi_matrix(data$X_f, params$w_f)
     mu <- data$X_f %*% params$beta_f
     dnorms <- matrix(NA, nrow=args$n, ncol=args$K)
     for (i in 1:args$n) {

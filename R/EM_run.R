@@ -12,11 +12,11 @@ EM_run <- function(data, model_init=model_params, args=args) {
     # note matrices are converted COL-BY-COL (e.g. [1 3; 2 4] -> 1,2,3,4)
     par_vec <- c(model_init$w_f, model_init$beta_f, model_init$sigma2)
 
-    # TODO: switch to squarem once debugged
-    res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
-                               objfn=EM_objfn,
-                               data=data, args=args,
-                               control=list(tol=args$tol, maxiter=args$maxit))
+    # WARNING: fpiter forced, SQUAREM attempts to push sigma < 0
+    res <- SQUAREM::fpiter(par_vec, fixptfn=EM_fixed_pt_fn,
+                           objfn=EM_objfn,
+                           data=data, args=args,
+                           control=list(tol=args$tol, maxiter=args$maxit))
     if (!res$convergence) {
         warning(sprintf("DID NOT CONVERGE @ maxit=%d, tol=%.1e", args$maxit, args$tol))
     }
@@ -24,7 +24,11 @@ EM_run <- function(data, model_init=model_params, args=args) {
         message("|| EM Completed")
     }
 
-    return(params_vec_to_list(res$par, args))
+    new_params <- params_vec_to_list(res$par, args)
+    if (any(is.na(new_params))) {
+        stop("EM_run produced NA parameter estimates")
+    }
+    return(new_params)
 }
 
 # Converting between c() concatenation for SQUAREM, and named lists
@@ -44,7 +48,8 @@ params_vec_to_list <- function(params_vec, args) {
 
 EM_objfn <- function(params_vec, data, args) {
     params <- params_vec_to_list(params_vec, args)
-    return(loglik(data, params, args))
+    # NOTE: negated log-likelihood as SQUAREM seeks a local minimum
+    return(-loglik(data, params, args))
 }
 
 EM_fixed_pt_fn <- function(params_vec, data, args) {
@@ -57,8 +62,12 @@ EM_fixed_pt_fn <- function(params_vec, data, args) {
     is_masked <- data$is_masked
     X_f <- data$X_f
 
+    if (any(is.na(sigma2)) | any(sigma2 <= 0)) {
+        browser()
+    }
+
     # Temporary workaround - setting Zs[masked,i] <- (Zmi0, Zmi1)
-    # and Zs[unmasked,i] <- (Z,Zmi1) works fine
+    # and Zs[unmasked,i] <- (Z,NA) works fine
     Zs <- data$Zs
     Zs[!data$is_masked,1] <- data$Z[!data$is_masked]
     Zs[!data$is_masked,2] <- NA
@@ -71,11 +80,7 @@ EM_fixed_pt_fn <- function(params_vec, data, args) {
         beta_f <- cpp_beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
 
         # Compute w_f updates (using one of the CD methods)
-        if (args$use_proximal_newton) {
-            w_f <- cpp_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
-        } else {
-            w_f <- cpp_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
-        }
+        w_f <- cpp_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=args$use_proximal_newton)
 
         # Second inner loop - compute E-step estimates
         D <- cpp_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
@@ -89,18 +94,16 @@ EM_fixed_pt_fn <- function(params_vec, data, args) {
         beta_f <- R_beta_update(X_f, D$D0, D$D1, D$D2, beta_f, sigma2, lambda)
 
         # Compute w_f updates (using one of the CD methods)
-        if (args$use_proximal_newton) {
-            w_f <- R_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=TRUE)
-        } else {
-            w_f <- R_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=FALSE)
-        }
+        w_f <- R_gating_update(X_f, D$D0, w_f, gamma, use_proximal_newton=args$use_proximal_newton)
 
         # Second inner loop - compute E-step estimates
         D <- R_EM_Estep(Zs, is_masked, X_f, w_f, beta_f, sigma2)
 
         # Compute sigma2 updates
         sigma2 <- R_sigma2_update(X_f, D$D0, D$D1, D$D2, beta_f)
-        stopifnot(all(sigma2 > 0))
+        if (any(is.na(sigma2)) | any(sigma2 <= 0)) {
+            stop("Sigma2 computed invalid values")
+        }
     }
     if (args$EM_verbose) {
         L2 <- loglik(data, params, args)

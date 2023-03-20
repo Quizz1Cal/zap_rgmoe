@@ -6,8 +6,8 @@ validate_inputs <- function(Z, X, K, lambda, gamma, alpha, sl_thresh,
     if (!is.numeric(K) | K %% 1 != 0 | K < 1) {stop("`K` must be a positive integer")}
     if (!is.numeric(gamma) | any(is.na(gamma))) {stop("Invalid `gamma` value(s)")}
     if (!is.numeric(lambda) | any(is.na(lambda))) {stop("Invalid `lambda` value(s)")}
-    if(alpha <= 0) stop("alpha must be strictly positive")
-    if(alpha > 1) stop("alpha must be less than 1")
+    if(!is.numeric(maxit) | alpha <= 0) stop("`alpha` must be strictly positive integer")
+    if(alpha > 1) stop("`alpha` must be less than 1")
     if(sl_thresh <=0 | sl_thresh > 0.25) stop("0 < `sl_thresh` <= 0.25")
     if(!is.numeric(tol) | tol <= 0) stop("`tol` must be strictly positive")
     if (!is.numeric(nfits) | nfits %% 1 != 0 | nfits < 1) {

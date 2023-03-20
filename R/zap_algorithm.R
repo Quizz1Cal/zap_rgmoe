@@ -10,19 +10,23 @@
 #' @return Vector of indices for samples to reject
 #' @export
 zap_v2 <- function(Z, X, K, lambda, gamma,
-                   alpha=0.05, sl_thresh=0.2,
-                   maxit=50,
+                   alpha=0.05,
+                   nfits=50,
                    masking_method="basic", # TODO: ALTER,
+                   sl_thresh=0.2,  # basic
                    alpha_m=NA, nu=NA, lambda_m=NA,  # adapt-GMM
                    tol=1e-4,
-                   nfits=50,
+                   maxit=50,
                    use_cpp=TRUE,
                    use_proximal_newton=FALSE,
-                   zap_verbose=FALSE, EM_verbose=FALSE) {
+                   EM_verbose=FALSE,
+                   zap_verbose=FALSE,
+                   seed=1) {
 
-    # TODO: Add new masking/etc. to this function
+    # TODO: Consistent location for (new) mask input checks
     validate_inputs(Z, X, K, lambda, gamma, alpha, sl_thresh,
                      maxit, masking_method, tol, nfits)
+
     # Check + set lambda, gamma
     if (length(lambda) == 1) {
         # print(paste0("Setting lambda=", lambda, "for all expert penalties"))
@@ -47,93 +51,92 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
                  alpha_m=alpha_m, nu=nu, lambda_m=lambda_m,
                  tol=tol, nfits=nfits,
                  use_cpp=use_cpp, use_proximal_newton=use_proximal_newton,
-                 zap_verbose=zap_verbose, EM_verbose=EM_verbose)
-    args <- setup_masking_inputs(args)
+                 zap_verbose=zap_verbose, EM_verbose=EM_verbose, seed=seed)
 
     # Collate model parameters
-    model_params <- withr::with_seed(1, list(w_f=matrix(0, nrow=p+1, ncol=K-1),
+    model_params <- withr::with_seed(seed, list(w_f=matrix(0, nrow=p+1, ncol=K-1),
                          beta_f=matrix(0, nrow=p+1, ncol=K),
                          sigma2=stats::runif(K, min=1, max=5)))
 
     # Collate data
     X_f <- make_X_f(X)
     data <- list(Z=Z, X=X, X_f=X_f)
-    data <- mask_data(data, args)  # adds Z_b0, Z_b1, and is_masked tracker
 
-    # Ideal: data$Zs[data$is_masked, -1] for masked data
-    # and data$Zs[!data$is_masked, 1] for unmasked data
-
-    # Additional setup (to refactor)
+    # Add masking data, method
+    args <- setup_masking_inputs(args)
+    data <- mask_data(data, args)  # adds Zs=matrix(Z_b0, Z_b1), is_masked
     if (masking_method == "tent" | masking_method == "symmetric_tent") {
         args$estimate_q <- adapt_gmm_estimate_q
+        args$compute_FDP <- NULL
+        args$select_rejections <- NULL
+        stop("Have not implemented FDP estimation for tent")
     } else if (masking_method == "basic") {
         args$estimate_q <- basic_estimate_q
+        args$compute_FDP <- basic_FDP_finite_est
+        args$select_rejections <- basic_select_rejections
     }
 
-    # NOTE TO SELF: note is_masked is specifically for EM_run
-    # I infer masked_set from this, which is used in ZAP algorithm.
-
-    # Initialise variables for masking procedure
-    masked_set = which(data$is_masked)
-    sl <- sl_thresh * (1:n %in% masked_set)
-    sr <- 1 - sl
-    FDP_t <- compute_FDP_finite_est(Z, sl, sr)
+    # Compute FDP
+    FDP_t <- args$compute_FDP(data, args)
+    regions <- basic_regions(data, args)
 
     t <- 0
     while (t < n & FDP_t > alpha) {
         if (zap_verbose) {
-            message(sprintf("|| ZAP-RGMoE Iteration: %5d/%-5d | FDP: %1.4f ||",
-                            t, n, FDP_t))
+            message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f A(%d) R(%d) ||",
+                            t, n, FDP_t, length(regions$A), length(regions$R)))
+            #message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f ||",
+            #                t, n, FDP_t))
         }
 
         # Re-fit the RGMOE model every (n %% nfits)-iterations
         if (t %% (n %/% nfits) == 0) {
-            data$is_masked <- 1:n %in% masked_set
             model_params <- EM_run(data, model_init=model_params, args=args)
         }
 
         # unmask data with best q using the correct q_estimate formula
         q_est <- args$estimate_q(data, model_params, args)
-        masked_set <- update_masked_set(masked_set, q_est)
+        data <- update_masking(data, args, q_est)
 
-        # Compute new estimates
-        sl <- sl_thresh * (1:n %in% masked_set)
-        sr <- 1 - sl
-        FDP_t <- compute_FDP_finite_est(Z, sl, sr)
+        # Compute new FDP estimate
+        FDP_t <- args$compute_FDP(data, args)
+        regions <- basic_regions(data, args)
+
+        if (t %% (n %/% 10) == 0) {browser()}
+        # plot(pnorm(data$Z)[1:args$n %in% regions$A], q_est[1:args$n %in% regions$A])
+        # plot(pnorm(data$Z)[1:args$n %in% regions$R], q_est[1:args$n %in% regions$R])
+        # plot(pnorm(data$Z), col=1+(1:args$n %in% regions$A))
+        # plot(pnorm(data$Z), col=1+(1:args$n %in% regions$A | 1:args$n %in% regions$R))
+
+        # plot(pnorm(data$Z), q_est, col=1+(data$is_masked))
+        # That seems too ... uniform in Z, as if side info has no impact.
+        # plot(pnorm(data$Z[!data$is_masked]), q_est[!data$is_masked])
+        # plot((data$Z)[!data$is_masked], q_est[!data$is_masked])
+
+        # plot(q_est, col=1+(1:args$n %in% regions$A))
+        # plot(q_est, col=1+(data$is_masked))
+        # plot(q_est, col=1+(1:args$n %in% regions$A | 1:args$n %in% regions$R))
 
         t = t + 1
     }
     if (FDP_t > alpha) {
         warning("Did not achieve FDP <= alpha")
     }
-    rejections <- select_rejections(Z, sl, sr)
-    message(sprintf("|| Zap Completed with FDP=%1.4f in %5d iterations ||",
+    rejections <- args$select_rejections(data, args)
+    message(sprintf("|| ZAP-RGMoE completed with FDP=%1.4f in %3d iterations ||",
             FDP_t, t))
     return(rejections)
 }
 
-
-#' Return FDP_estimate without user thresholding
-#'
-#' @param Z Numeric vector of z-values
-#' @param sl Left-region threshold
-#' @param sr Right-region threshold
-#'
-#' @return FDP_finite estimate
-#'
-#' Z <- c(0.213, 1.652, 0.758, -1.149, -0.664)
-#' compute_FDP_finite_est(Z, rep(0.15, 5), rep(0.85, 5))
-#' ## returns 1
-compute_FDP_finite_est <- function(Z, sl, sr) {
-    # One assumption here: sl, sr dont exceed 0.25/0.75 respectively (see ZAP p11)
-    stopifnot(sl <= 0.25, sr >= 0.75)
-    U <- stats::pnorm(Z)
-    R <- which(U <= sl | U >= sr)  # Rl,t union Rr,t knowing the thresholds exceed 0.5
-    A <- which((0.5-sl <= U & U <= 0.5) | (0.5 <= U & U <= 1.5-sr))  # Al,t union Ar,t
-    return((1+length(A)) / max(1, length(R)))
-}
-
-select_rejections <- function(Z, sl, sr) {
-    U <- stats::pnorm(Z)
-    return(which(U <= sl | U >= sr))
+update_masking <- function(data, args, q_est) {
+    # unmask pair with best q (taking random choice if a tie)
+    # TODO: Do ties even occur?
+    masked_set <- which(data$is_masked)
+    stopifnot(length(masked_set) >= 1)
+    i_bests <- masked_set[which.max.with_ties(q_est[masked_set])]
+    to_unmask <- withr::with_seed(args$seed,
+                                  i_bests[sample(length(i_bests), size=1)])
+    new_masked_set <- masked_set[masked_set != to_unmask]
+    data$is_masked <- (1:args$n %in% new_masked_set)
+    return(data)
 }

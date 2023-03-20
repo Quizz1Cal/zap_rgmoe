@@ -31,6 +31,21 @@ setup_masking_inputs <- function(args) {
     return(args)
 }
 
+mask_data <- function(data, args) {
+    # Apply appropriate masking function. All must define is_masked and
+    # a pair of (possibly mutually NA) masked data Z_b0, Z_b1
+    if (args$masking_method == "tent") {
+        # Adapt-GMM
+        return(adapt_gmm_Z_masking(data, args))
+    } else if (args$masking_method == "symmetric_tent") {
+        stop("Package not capable of masking Z into different values")
+        return(adapt_Z_masking(data, args))
+    } else if (args$masking_method == "basic") {
+        # Retained for posterity. The masking procedure in ZAP
+        return(basic_masking(data, args))
+    }
+}
+
 # Uses Adapt-18 masking function g(p) = min(p, 1-p)
 adapt_Z_masking <- function(data, args) {
     return(adapt_gmm_Z_masking(data, args))
@@ -56,7 +71,8 @@ adapt_gmm_Z_masking <- function(data, args) {
 
     # Now construct the inferred Z-values where defined
     # For tent-masking, m < alpha_m required
-    data$is_masked <- (m <= args$alpha_m)  # Cannot mask if m > alpha_m
+    # TODO: Ignores case that m=alpha_m=lambda_m
+    data$is_masked <- (m <= args$alpha_m)  # b=0 a.s. if m > alpha_m
     data$Zs <- matrix(NA, nrow=args$n, ncol=2)
 
     # only compute Zs where possible
@@ -68,41 +84,18 @@ adapt_gmm_Z_masking <- function(data, args) {
     return(data)
 }
 
-mask_data <- function(data, args) {
-    # Apply appropriate masking function. All must define is_masked and
-    # a pair of (possibly mutually NA) masked data Z_b0, Z_b1
-    if (args$masking_method == "tent") {
-        # Adapt-GMM
-        return(adapt_gmm_Z_masking(data, args))
-    } else if (args$masking_method == "symmetric_tent") {
-        stop("Package not capable of masking Z into different values")
-        return(adapt_Z_masking(data, args))
-    } else if (args$masking_method == "basic") {
-        # Retained for posterity. The masking procedure in ZAP
-        return(basic_masking(data, args))
-    }
-}
-
-basic_masking <- function(data, args) {
-    U <- stats::pnorm(data$Z)
-    Uhat <- (1.5-U)*(U > 0.5) + (0.5-U)*(U <= 0.5)
-    data$Zs <- cbind(data$Z, stats::qnorm(Uhat))
-    data$is_masked <- rep(TRUE, args$n)
-    return(data)
-}
-
 # Computes qhat_t (a vector of q-estimates for each i, at ZAP iteration t)
 # At each t, should reject i with maximum q_estimate
 # TODO: I was scaling before. Now I am not. Confirm, 100%, Z is assumed scaled/dealt with.
 # ASSUMES Z_pairs = {Z_{i, b=0}, Z_{i, b=1}}
 adapt_gmm_estimate_q <- function(data, params, args) {
-    pis <- pi_matrix(data$X_f, params$w_f)
+    pis <- cpp_pi_matrix(data$X_f, params$w_f)
     mu <- data$X_f %*% params$beta_f
 
     output <- rep(0, args$n)  # where m > alpha_m / b=0 a.s., output 0
 
     # Compute q-estimates only for masked data
-    for (i in which(data$is_masked)) {
+    for (i in which(as.logical(data$is_masked))) {
         # bi = 0 i.e. pi = mi
         wZ_b0 <- sum(pis[i,] * stats::dnorm(data$Zs[i,1], mu[i,],
                                                 sqrt(params$sigma2))
@@ -118,31 +111,50 @@ adapt_gmm_estimate_q <- function(data, params, args) {
     return(output)
 }
 
-basic_estimate_q <- function(data, params, args) {
-    # Note: as basic, [,1] equals the original Z.
-    pis <- pi_matrix(data$X_f, params$w_f)
-    mu <- data$X_f %*% params$beta_f
-
-    dZ_b0 <- c()
-    dZ_b1 <- c()
-    # Compute mixture densities f(Z1 | x_i), f(Z2 | x_i)
-    for (i in 1:args$n) {
-        # bi = 0 i.e. pi = mi
-        dZ_b0[i] <- sum(pis[i,] * stats::dnorm(data$Zs[i,1],
-                                               mu[i,], sqrt(params$sigma2)))
-        # bi = 1 i.e. pi != mi
-        dZ_b1[i] <- sum(pis[i,] * stats::dnorm(data$Zs[i,2],
-                                               mu[i,], sqrt(params$sigma2)))
-    }
-    output <- dZ_b1 / (dZ_b1 + dZ_b0)
-    return(output)
+basic_FDP_finite_est <- function(data, args) {
+    # One assumption here: sl, sr dont exceed 0.25/0.75 respectively (see ZAP p11)
+    regions <- basic_regions(data, args)
+    return((1+length(regions$A)) / max(1, length(regions$R)))
 }
 
-update_masked_set <- function(masked_set, q_est) {
-    # unmask pair with best q (taking random choice if a tie)
-    # TODO: Do ties even occur?
-    stopifnot(length(masked_set) >= 1)
-    i_bests <- masked_set[which.max.with_ties(q_est[masked_set])]
-    to_unmask <- i_bests[sample(length(i_bests), size=1)]
-    return(masked_set[masked_set != to_unmask])
+basic_select_rejections <- function(data, args) {
+    return(basic_regions(data, args)$R)
+}
+
+basic_regions <- function(data, args) {
+    sl <- args$sl_thresh * data$is_masked
+    sr <- 1 - sl
+    stopifnot(sl <= 0.25, sr >= 0.75)
+
+    U <- stats::pnorm(data$Z)
+    R <- which(U <= sl | U >= sr)  # Rl,t union Rr,t knowing the thresholds exceed 0.5
+    A <- which((0.5-sl <= U & U <= 0.5) | (0.5 <= U & U <= 1.5-sr))  # Al,t union Ar,t
+    return(list(A=A,R=R))
+}
+
+basic_masking <- function(data, args) {
+    U <- stats::pnorm(data$Z)
+    Uhat <- (1.5-U)*(U > 0.5) + (0.5-U)*(U <= 0.5)
+    data$Zs <- cbind(data$Z, stats::qnorm(Uhat))
+    data$is_masked <- rep(TRUE, args$n)
+    return(data)
+}
+
+basic_estimate_q <- function(data, params, args) {
+    # Note: estimate is symmetric in masked values
+    pis <- cpp_pi_matrix(data$X_f, params$w_f)
+    mu <- data$X_f %*% params$beta_f
+
+    output <- rep(0, args$n)
+    # Compute mixture densities f(Z1 | x_i), f(Z2 | x_i) ONLY for masked data
+    for (i in which(as.logical(data$is_masked))) {
+        # bi = 0 i.e. pi = mi
+        dZ_b0 <- sum(pis[i,] * stats::dnorm(data$Zs[i,1],
+                                               mu[i,], sqrt(params$sigma2)))
+        # bi = 1 i.e. pi != mi
+        dZ_b1 <- sum(pis[i,] * stats::dnorm(data$Zs[i,2],
+                                               mu[i,], sqrt(params$sigma2)))
+        output[i] <- dZ_b1 / (dZ_b1 + dZ_b0)
+    }
+    return(output)
 }
