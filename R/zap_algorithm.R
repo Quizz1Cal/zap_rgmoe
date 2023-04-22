@@ -27,6 +27,8 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     validate_inputs(Z, X, K, lambda, gamma, alpha, sl_thresh,
                      maxit, masking_method, tol, nfits)
 
+    if (!use_cpp) {warning("use_cpp=FALSE is not ideal for testing")}
+
     # Check + set lambda, gamma
     if (length(lambda) == 1) {
         # print(paste0("Setting lambda=", lambda, "for all expert penalties"))
@@ -67,23 +69,30 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     data <- mask_data(data, args)  # adds Zs=matrix(Z_b0, Z_b1), is_masked
     if (masking_method == "tent" | masking_method == "symmetric_tent") {
         args$estimate_q <- adapt_gmm_estimate_q
-        args$compute_FDP <- NULL
-        args$select_rejections <- NULL
-        stop("Have not implemented FDP estimation for tent")
+        args$compute_FDP <- adapt_gmm_FDP_finite_est
+        args$regions <- adapt_gmm_regions
+        warning("Still debugging FDP estimation for tent")
     } else if (masking_method == "basic") {
         args$estimate_q <- basic_estimate_q
         args$compute_FDP <- basic_FDP_finite_est
-        args$select_rejections <- basic_select_rejections
+        args$regions <- basic_regions
     }
 
     # Compute FDP
     FDP_t <- args$compute_FDP(data, args)
-    regions <- basic_regions(data, args)
+    regions <- args$regions(data, args)
+    data <- label_regions(data, args) # DEBUG CODE - to label regions of data
+
+    # browser()
+
+    # plot(data$Z, data$m, col=1+(data$label))
+    # legend("topleft", legend=levels(data$label), col=1:3, pch=1)
 
     t <- 0
     while (t < n & FDP_t > alpha) {
-        if (zap_verbose) {
-            message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f A(%d) R(%d) ||",
+        # Print status report 5 times per fit
+        if (zap_verbose & (t %% (n %/% (nfits * 5)) == 0)) {
+            message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f |A|: %-4d |R|: %-4d ||",
                             t, n, FDP_t, length(regions$A), length(regions$R)))
             #message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f ||",
             #                t, n, FDP_t))
@@ -91,6 +100,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
 
         # Re-fit the RGMOE model every (n %% nfits)-iterations
         if (t %% (n %/% nfits) == 0) {
+            if (zap_verbose) message("|| ZAP-RGMoE - Refit model using EM algorithm")
             model_params <- EM_run(data, model_init=model_params, args=args)
         }
 
@@ -100,9 +110,13 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
 
         # Compute new FDP estimate
         FDP_t <- args$compute_FDP(data, args)
-        regions <- basic_regions(data, args)
+        regions <- args$regions(data, args)
+        data <- label_regions(data, args) # DEBUGGING CODE - to label regions of data
+        # Green == A btw.
 
-        if (t %% (n %/% 10) == 0) {browser()}
+        if (t %% (n %/% 10) == 0) {
+            # browser()
+        }
         # plot(pnorm(data$Z)[1:args$n %in% regions$A], q_est[1:args$n %in% regions$A])
         # plot(pnorm(data$Z)[1:args$n %in% regions$R], q_est[1:args$n %in% regions$R])
         # plot(pnorm(data$Z), col=1+(1:args$n %in% regions$A))
@@ -122,7 +136,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     if (FDP_t > alpha) {
         warning("Did not achieve FDP <= alpha")
     }
-    rejections <- args$select_rejections(data, args)
+    rejections <- regions$R
     message(sprintf("|| ZAP-RGMoE completed with FDP=%1.4f in %3d iterations ||",
             FDP_t, t))
     return(rejections)
