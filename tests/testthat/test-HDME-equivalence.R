@@ -242,7 +242,7 @@ test_that("HDME Full Algorithm is outperformed by ZAP on unmasked, equal-varianc
         data$maxit <- 1300 # 200 works for squarem
         data$use_proximal_newton <- F
         data$use_cpp <- F
-        data$EM_verbose <- T
+        data$EM_verbose <- F
         data$tol <- 1e-4
 
         zap_params <- EM_run(data, model_init=data, args=data)

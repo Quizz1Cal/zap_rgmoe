@@ -8,9 +8,9 @@ make_test_zap_iteration_instance <- function() {
 }
 
 # TODO: Feels redundant.
-make_test_zap_problem_instance <- function(n=500) {
-    dataset <- make_zap_simulated_dataset(setup=1, eta=-2, zeta=3, eps=2.1,
-                                          sigma=1, n=n)
+make_test_zap_problem_instance <- function(n=500, p=2) {
+    dataset <- make_zap_simulated_dataset(setup=3, eta=-2, zeta=1.5, eps=1.9,
+                                          sigma=1, n=n, p=p)
     return(dataset)
 }
 
@@ -25,10 +25,10 @@ make_test_EM_parameter_instance <- function(p, K) {
 }
 
 make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1, K=2,
-                                            eta=-2, zeta=1, eps=2.1, mask_prop=0) {
+                                            eta=-2, zeta=1, eps=2.1, p=2, mask_prop=0) {
     # Problem instance
     data <- make_zap_simulated_dataset(setup=setup, n=n, sigma=sigma,
-                                                   eta=eta, zeta=zeta, eps=eps)
+                                                   eta=eta, zeta=zeta, eps=eps, p=p)
     Z <- data$Z
     X <- data$X
     n_masked <- round(data$n*mask_prop)

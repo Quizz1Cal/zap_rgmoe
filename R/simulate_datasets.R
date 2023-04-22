@@ -1,10 +1,12 @@
-make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000) {
+make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000, p=2) {
     # Generates ZAP's simulated data sets used in functional evaluation
     # Setup must be 1,2 or 3
     stopifnot(setup %in% 1:3)
 
     # Generate covariates
-    p <- 2  # dimensionality of covariate data
+    if (p != 2) {
+        warning("WARNING: Not using Dimension-2 Data")
+    }
     X <- matrix(stats::rnorm(n*p, mean=0, sd=sqrt(0.5)), nrow=n)  # n x p
     X.dot <- rowSums(X)
 
