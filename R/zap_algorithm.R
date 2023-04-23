@@ -12,7 +12,7 @@
 zap_v2 <- function(Z, X, K, lambda, gamma,
                    alpha=0.05,
                    nfits=50,
-                   masking_method="basic", # TODO: ALTER,
+                   masking_method="tent", # TODO: ALTER,
                    sl_thresh=0.2,  # basic
                    alpha_m=NA, nu=NA, lambda_m=NA,  # adapt-GMM
                    tol=1e-4,
@@ -68,12 +68,12 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     args <- setup_masking_inputs(args)
     data <- mask_data(data, args)  # adds Zs=matrix(Z_b0, Z_b1), is_masked
     if (masking_method == "tent" | masking_method == "symmetric_tent") {
-        args$estimate_q <- adapt_gmm_estimate_q
+        args$assessor <- adapt_gmm_estimate_q
         args$compute_FDP <- adapt_gmm_FDP_finite_est
         args$regions <- adapt_gmm_regions
         warning("Still debugging FDP estimation for tent")
     } else if (masking_method == "basic") {
-        args$estimate_q <- basic_estimate_q
+        args$assessor <- basic_estimate_q
         args$compute_FDP <- basic_FDP_finite_est
         args$regions <- basic_regions
     }
@@ -89,7 +89,8 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
     # legend("topleft", legend=levels(data$label), col=1:3, pch=1)
 
     t <- 0
-    while (t < n & FDP_t > alpha) {
+    n_masked <- sum(data$is_masked)
+    while (t < n & FDP_t > alpha & n_masked > 0) {
         # Print status report 5 times per fit
         if (zap_verbose & (t %% (n %/% (nfits * 5)) == 0)) {
             message(sprintf("|| ZAP-RGMoE Iteration: %3d/%-3d | FDP: %1.4f |A|: %-4d |R|: %-4d ||",
@@ -105,8 +106,9 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
         }
 
         # unmask data with best q using the correct q_estimate formula
-        q_est <- args$estimate_q(data, model_params, args)
+        q_est <- args$assessor(data, model_params, args)
         data <- update_masking(data, args, q_est)
+        n_masked <- sum(data$is_masked)
 
         # Compute new FDP estimate
         FDP_t <- args$compute_FDP(data, args)
@@ -143,6 +145,7 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
 }
 
 update_masking <- function(data, args, q_est) {
+    # NOTE: Assumes EXACTLY one is dropped
     # unmask pair with best q (taking random choice if a tie)
     # TODO: Do ties even occur?
     masked_set <- which(data$is_masked)

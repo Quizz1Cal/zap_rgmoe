@@ -116,39 +116,6 @@ adapt_gmm_regions <- function(data, args) {
     return(list(A=A, R=R))
 }
 
-zap_regions <- function(data, args) {
-    # NOTE: This is more-or-less how I would facilitate thresholding in this package.
-
-    # Based on ZAP p. 11, threshold in Z-space;
-    thresholds <- zap_thresholding_function(data, args)
-    # Should work regardless if alpha_m=lambda_m or not, as transformation-based.
-    # U-space
-    # LEFT: mirror(u_in_farleft) = zeta*u + 1 - v/2
-    # RIGHT: mirror(u_in_farright) = zeta*(u-1) + v/2
-    # Z-space
-    # Z-LEFT: mirror(zfarleft) = qnorm(zeta*pnorm(z) + 1 - v/2)
-    # Z-RIGHT: mirror(zfarright) = qnorm(zeta*(pnorm(z)-1) + v/2)
-    reflect_left_thr <- function(thr_z) {
-        return(stats::qnorm(args$zeta*stats::pnorm(thr_z) + 1 - args$nu/2))
-    }
-    reflect_right_thr <- function(thr_z) {
-        return(stats::qnorm(args$zeta*(stats::pnorm(thr_z)-1) + args$nu/2))
-    }
-    Rl <- data$Z <= thresholds$sl
-    Rr <- data$Z >= thresholds$sr
-    Al <- (reflect_left_thr(thresholds$sl) <= data$Z) & (data$Z <= stats::qnorm(args$nu/2))
-    Ar <- (stats::qnorm(1 - args$nu/2) < data$Z) & (data$Z <= reflect_right_thr(thresholds$sr))
-    return(list(A=which(Al | Ar), R=which(Rl | Rr)))
-}
-
-zap_thresholding_function <- function(data, args) {
-    # p. 46 Alg 4
-    # Idea: 1. construct ranking functions
-    # 2. Compute the 'more-extreme' of the two masked candidates (in U-space that was one near 0/1)
-    # 3. Rank with the more-extreme ones to find the 'highest'
-    # 4. Update EITHER L/R threshold (whichever appropriate) to equal the more-extreme value
-}
-
 adapt_gmm_FDP_finite_est <- function(data, args) {
     regions <- adapt_gmm_regions(data, args)
     return((1+length(regions$A)) / (args$zeta * length(regions$R)))
@@ -209,20 +176,61 @@ basic_masking <- function(data, args) {
 }
 
 basic_estimate_q <- function(data, params, args) {
+    # Assessor function; high value suggests Z has more likely near0
     # Note: estimate is symmetric in masked values
     pis <- cpp_pi_matrix(data$X_f, params$w_f)
     mu <- data$X_f %*% params$beta_f
 
     output <- rep(0, args$n)
     # Compute mixture densities f(Z1 | x_i), f(Z2 | x_i) ONLY for masked data
+    U <- stats::pnorm(data$Z)
+    s <- (U > 0.5)
+    Uhat <- (1.5-U)*s + (0.5-U)*(1-s)
+    mins <- pmin(U, Uhat)
+    maxs <- pmax(U, Uhat)
+    Zinner <- stats::qnorm(s*mins + (1-s)*maxs)
+    Zouter <- stats::qnorm(s*maxs + (1-s)*mins)
     for (i in which(as.logical(data$is_masked))) {
-        # bi = 0 i.e. pi = mi
-        dZ_b0 <- sum(pis[i,] * stats::dnorm(data$Zs[i,1],
+        # bi = 0 i.e. Z is the more extreme
+        dZ_b0 <- sum(pis[i,] * stats::dnorm(Zouter[i],
                                                mu[i,], sqrt(params$sigma2)))
-        # bi = 1 i.e. pi != mi
-        dZ_b1 <- sum(pis[i,] * stats::dnorm(data$Zs[i,2],
+        # bi = 1 i.e. Z is the less extreme
+        dZ_b1 <- sum(pis[i,] * stats::dnorm(Zinner[i],
                                                mu[i,], sqrt(params$sigma2)))
         output[i] <- dZ_b1 / (dZ_b1 + dZ_b0)
     }
     return(output)
+}
+
+zap_Z_regions <- function(data, args) {
+    # NOTE: This is more-or-less how I would facilitate thresholding in this package.
+
+    # Based on ZAP p. 11, threshold in Z-space;
+    thresholds <- zap_thresholding_function(data, args)
+    # Should work regardless if alpha_m=lambda_m or not, as transformation-based.
+    # U-space
+    # LEFT: mirror(u_in_farleft) = zeta*u + 1 - v/2
+    # RIGHT: mirror(u_in_farright) = zeta*(u-1) + v/2
+    # Z-space
+    # Z-LEFT: mirror(zfarleft) = qnorm(zeta*pnorm(z) + 1 - v/2)
+    # Z-RIGHT: mirror(zfarright) = qnorm(zeta*(pnorm(z)-1) + v/2)
+    reflect_left_thr <- function(thr_z) {
+        return(stats::qnorm(args$zeta*stats::pnorm(thr_z) + 1 - args$nu/2))
+    }
+    reflect_right_thr <- function(thr_z) {
+        return(stats::qnorm(args$zeta*(stats::pnorm(thr_z)-1) + args$nu/2))
+    }
+    Rl <- data$Z <= thresholds$sl
+    Rr <- data$Z >= thresholds$sr
+    Al <- (reflect_left_thr(thresholds$sl) <= data$Z) & (data$Z <= stats::qnorm(args$nu/2))
+    Ar <- (stats::qnorm(1 - args$nu/2) < data$Z) & (data$Z <= reflect_right_thr(thresholds$sr))
+    return(list(A=which(Al | Ar), R=which(Rl | Rr)))
+}
+
+zap_Z_thresholding_function <- function(data, args) {
+    # p. 46 Alg 4
+    # Idea: 1. construct ranking functions
+    # 2. Compute the 'more-extreme' of the two masked candidates (in U-space that was one near 0/1)
+    # 3. Rank with the more-extreme ones to find the 'highest'
+    # 4. Update EITHER L/R threshold (whichever appropriate) to equal the more-extreme value
 }
