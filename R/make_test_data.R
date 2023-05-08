@@ -38,7 +38,11 @@ make_test_EM_iteration_instance <- function(setup=1, n=500, sigma=1, K=2,
     # Abuse of interface to generate mock data.
     data <- mask_data(data, args=list(masking_method="basic", n=data$n))
     data$is_masked <- is_masked
-
+    data$EM_verbose <- FALSE
+    data$tol <- 1e-4
+    data$maxit <- 50
+    data$use_cpp=TRUE
+    data$use_proximal_newton=FALSE
 
     data <- append(data, make_test_EM_parameter_instance(p=data$p, K=K))
     return(data)

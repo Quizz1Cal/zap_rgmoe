@@ -19,7 +19,7 @@ arma::mat cpp_gating_update(arma::mat X_f, arma::mat tau, arma::mat w_f,
         d_k = arma::ones(n) / 4;
     }
 
-    int maxit = 10000;
+    int maxit = 200;  // MODIFIED from 10000, only impacts worst-cases
     int it = 0;
     while (it < maxit) {
         arma::mat w_f_old = w_f_new;
@@ -49,14 +49,14 @@ arma::mat cpp_gating_update(arma::mat X_f, arma::mat tau, arma::mat w_f,
             q_new = cpp_Fs(X_f, tau, w_f_new, gamma);
             it2 = it2 + 1;
         }
-        if (it2 >= maxit) {Rcout << "!n<it2(CGP) hit max>!n";}
+        if (it2 >= maxit) {Rcout << "<it2(CGP) hit max>\n";}
         if (q_new - q_old < eps) {
             break;
         }
         it = it + 1;
 
     }
-    if (it >= maxit) {Rcout << "!n<it(CGP) hit max>!n"; }
+    if (it >= maxit) {Rcout << "<it(CGP) hit max>\n"; }
     return(w_f_new);
 }
 

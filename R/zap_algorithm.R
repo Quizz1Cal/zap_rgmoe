@@ -9,7 +9,8 @@
 #'
 #' @return Vector of indices for samples to reject
 #' @export
-zap_v2 <- function(Z, X, K, lambda, gamma,
+zap_v2 <- function(Z, X, K=NULL,
+                   lambda=1, gamma=1,  # penalty SCALARS
                    alpha=0.05,
                    nfits=50,
                    masking_method="tent", # TODO: ALTER,
@@ -21,33 +22,22 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
                    use_proximal_newton=FALSE,
                    EM_verbose=FALSE,
                    zap_verbose=FALSE,
-                   seed=1) {
+                   seed=NULL) {
 
     # TODO: Consistent location for (new) mask input checks
     validate_inputs(Z, X, K, lambda, gamma, alpha, sl_thresh,
-                     maxit, masking_method, tol, nfits)
+                     maxit, masking_method, tol, nfits, seed)
 
     if (!use_cpp) {warning("use_cpp=FALSE is not ideal for testing")}
 
-    # Check + set lambda, gamma
-    if (length(lambda) == 1) {
-        # print(paste0("Setting lambda=", lambda, "for all expert penalties"))
-        lambda = rep(lambda, K)
-    } else {
-        if(length(lambda)!=K) stop("`lambda` vector must be length K")
-    }
-    if (length(gamma) == 1) {
-        # print(paste0("Setting gamma=", gamma, "for all gating penalties"))
-        gamma = rep(gamma, K-1)
-    } else {
-        if(length(gamma)!=K-1) stop("`gamma` vector must be length K-1")
-    }
+    # set seed to be random if desired
+    if (is.null(seed)) {seed = sample.int(10000, size=1)}
 
-    # Collate hyper-parameters
+    # Collate hyper-parameters (excluding those in tuning)
     n <- length(Z)
     p <- dim(X)[2]
-    args <- list(n=n, p=p, K=K,
-                 lambda=lambda, gamma=gamma,
+    args <- list(n=n, p=p,
+                 # K=K, lambda=lambda, gamma=gamma,
                  alpha=alpha, sl_thresh=sl_thresh,
                  maxit=maxit, masking_method=masking_method,
                  alpha_m=alpha_m, nu=nu, lambda_m=lambda_m,
@@ -55,18 +45,14 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
                  use_cpp=use_cpp, use_proximal_newton=use_proximal_newton,
                  zap_verbose=zap_verbose, EM_verbose=EM_verbose, seed=seed)
 
-    # Collate model parameters
-    model_params <- withr::with_seed(seed, list(w_f=matrix(0, nrow=p+1, ncol=K-1),
-                         beta_f=matrix(0, nrow=p+1, ncol=K),
-                         sigma2=stats::runif(K, min=1, max=5)))
-
-    # Collate data
-    X_f <- make_X_f(X)
-    data <- list(Z=Z, X=X, X_f=X_f)
-
     # Add masking data, method
     args <- setup_masking_inputs(args)
+
+    X_f <- make_X_f(X)
+    data <- list(Z=Z, X=X, X_f=X_f)
     data <- mask_data(data, args)  # adds Zs=matrix(Z_b0, Z_b1), is_masked
+
+    # Add masking method functions
     if (masking_method == "tent" | masking_method == "symmetric_tent") {
         args$assessor <- adapt_gmm_estimate_q
         args$compute_FDP <- adapt_gmm_FDP_finite_est
@@ -77,6 +63,26 @@ zap_v2 <- function(Z, X, K, lambda, gamma,
         args$compute_FDP <- basic_FDP_finite_est
         args$regions <- basic_regions
     }
+
+    # Assign and/or select K
+    if (is.null(K)) {
+        if (zap_verbose) {message("Performing model selection for `K`")}
+        # Pick a K using tuning and the provided gamma, lambda
+        best_candidate <- model_hypparam_tuning(data, args, Ks=2:5)
+        K <- best_candidate$K
+        warning(sprintf("Executing with number of experts K=%d", K))
+    }
+
+    # Standardise lambda, gamma and assign
+    if (length(gamma) == 1) {gamma = rep(gamma, K-1)}
+    if (length(lambda) == 1) {lambda = rep(lambda, K)}
+    args$gamma <- gamma
+    args$lambda <- lambda
+    args$K <- K
+
+    # Collate model parameters
+    model_params <- initialise_model_params(p=args$p, K=args$K, seed=args$seed)
+
 
     # Compute FDP
     FDP_t <- args$compute_FDP(data, args)

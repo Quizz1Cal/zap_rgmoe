@@ -1,9 +1,3 @@
-test_that("FDP estimation using full masking", {
-    warning("Requires fixing")
-    # data <- make_test_zap_iteration_instance()
-    # expect_equal(compute_basic_FDP_finite_est(data$Z, data$sl, data$sr), 1)
-})
-
 test_that("Inputs must be valid", {
     data <- make_test_zap_problem_instance()
     expect_error(zap_v2(c(NA,1), data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2)),
@@ -33,12 +27,17 @@ test_that("Inputs must be valid", {
     # Z length match X
     expect_error(zap_v2(data$Z[1:10], data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2)),
                  regexp="same number of instances")
+    # bad null K with vector lambda, gamma
+    expect_error(zap_v2(data$Z, data$X, K=NULL, lambda=rep(0.1,2), gamma=0.1),
+                 regexp="Must provide `K` alongside vector `lambda`")
+    expect_error(zap_v2(data$Z, data$X, K=NULL, lambda=0.1, gamma=rep(0.1,2)),
+                 regexp="Must provide `K` alongside vector `gamma`")
     # bad length lambda vector
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,2), gamma=rep(0.1,2)),
-                 regexp="must be length K")
+                 regexp="does not equal K")
     # bad length gamma vector
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,3)),
-                 regexp="must be length K-1")
+                 regexp="does not equal K-1")
 
     # bad sl_thresh
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
@@ -58,6 +57,7 @@ test_that("Inputs must be valid", {
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         nfits = -5),
                  regexp="nfits.*positive integer")
+
     # bad maxit
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         maxit = 1.2),
@@ -70,4 +70,9 @@ test_that("Inputs must be valid", {
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         masking_method = "bozo"),
                  regexp=".*selection.*masking_method")
+
+    # Bad seed
+    expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
+                        seed="bozo"),
+                regexp=".*must be an integer")
 })
