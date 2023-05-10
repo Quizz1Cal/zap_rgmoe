@@ -19,7 +19,7 @@ arma::mat cpp_gating_update(arma::mat X_f, arma::mat tau, arma::mat w_f,
         d_k = arma::ones(n) / 4;
     }
 
-    int maxit = 200;  // MODIFIED from 10000, only impacts worst-cases
+    int maxit = 500;  // MODIFIED from 10000, only impacts worst-cases
     int it = 0;
     while (it < maxit) {
         arma::mat w_f_old = w_f_new;

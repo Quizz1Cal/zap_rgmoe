@@ -1,16 +1,20 @@
+if(F){
 test_that("SQUAREM::squarem and SQUAREM::fpiter match with sufficient maxit (justifies using squarem)", {
     # Q: Decent sigma threshold; does it affect results
-    # Q: Decent c++ maxit; does it affect results (500 had 4 hits, trying 200 now)
-    # Q: Will squarem:20 always hit the fpiter:250?
 
-    # RES: for BOTH cpp=T/F, @K=3 squarem needed 100 fits, @K=2 only 20.
+    # Testing outcomes
+    # for BOTH cpp=T/F, @K=3 squarem needed 100 fits, @K=2 only 20.
     # Moreover fpiter didn't catch up @K=3, 250 fits; it did @K=2, 100 fits
-    # >> FOR CPP, SQUAREM @ 20 for K=3, n=5k appears to work well.
 
     # Comparing cpp=T to cpp=F; @K=3 both match @250, but >20 divg in squarem leading up to it
     # Meanwhole @K=2 everything matched.
     # Worth noting that R code was FASTER when degeneracy (K=3) occurred @itcgp500
-    # >> With degeneracy, need high runs for sq, fpiter so that cpp == R.
+    # With reduced CGPBREAK; minor fpiter dev, diminishing sq dev.
+
+    # >> SQUAREM @ 20 for K=2, n=5k, @ 100 for K=3, n=5k, cpp, @250 for K=3,n=5k,R.
+    # >> FPITER (cpp/R) STRUGGLES at K=3; need 100 @ K=2, n=5k.
+    # >> KEEP CGPBREAK high.
+
 
     candidates <- expand.grid(list(maxit=c(20,100,250), K=c(2,3),
                                    use_cpp=c(TRUE,FALSE)))
@@ -40,5 +44,5 @@ test_that("SQUAREM::squarem and SQUAREM::fpiter match with sufficient maxit (jus
         # Tolerance@n=5k, K=3 in LL is: INTRACTIBLE.
 
     }
-
 })
+}

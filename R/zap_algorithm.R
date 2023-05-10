@@ -57,7 +57,6 @@ zap_v2 <- function(Z, X, K=NULL,
         args$assessor <- adapt_gmm_estimate_q
         args$compute_FDP <- adapt_gmm_FDP_finite_est
         args$regions <- adapt_gmm_regions
-        warning("Still debugging FDP estimation for tent")
     } else if (masking_method == "basic") {
         args$assessor <- basic_estimate_q
         args$compute_FDP <- basic_FDP_finite_est

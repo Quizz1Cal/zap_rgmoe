@@ -1,5 +1,5 @@
 test_that("Inputs must be valid", {
-    data <- make_test_zap_problem_instance()
+    data <- make_test_zap_problem_instance(n=100)
     expect_error(zap_v2(c(NA,1), data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2)),
                  regexp="Invalid `Z`")
     expect_error(zap_v2(data$Z, c(NA,1), K=3, lambda=rep(0.1,3), gamma=rep(0.1,2)),
@@ -71,8 +71,12 @@ test_that("Inputs must be valid", {
                         masking_method = "bozo"),
                  regexp=".*selection.*masking_method")
 
-    # Bad seed
+    # Check seed
     expect_error(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
                         seed="bozo"),
                 regexp=".*must be an integer")
+    expect_failure(expect_error(suppressWarnings(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
+                        seed=1, nfits=1))))
+    expect_failure(expect_error(suppressWarnings(zap_v2(data$Z, data$X, K=3, lambda=rep(0.1,3), gamma=rep(0.1,2),
+                          seed=NULL, nfits=1))))
 })

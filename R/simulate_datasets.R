@@ -61,22 +61,94 @@ make_zap_simulated_dataset <- function(setup, eta, zeta, eps, sigma, n=5000, p=2
                 mu.r=mu.r, mu.l=mu.l))
 }
 
-# Generate required simulated datasets
-make_all_simulation_study_dataset_instances <- function(file_dir, n=5000,
-                                                        n_reps=150) {
+make_global_null_dataset <- function(n, p) {
+    # Generate covariates
+    if (p != 2) {
+        warning("WARNING: Not using Dimension-2 Data")
+    }
+    # essentially spurious
+    X <- matrix(stats::rnorm(n*p, mean=0, sd=sqrt(0.5)), nrow=n)  # n x p
+
+    # Generate Z
+    K <- 3 # null only though
+    true_pis <- matrix(0, nrow=n, ncol=K)
+    true_pis[,1] <- 1
+
+    stopifnot(all(true_pis >= 0))
+    delta <- rep(1, n)  # can only select null
+    Z <- stats::rnorm(n)  # simple null sampling
+    densities <- stats::dnorm(Z)  # simple null distribution
+    is_null <- rep(TRUE, n)  # all null
+    p.vals <- 2*pnorm(-abs(Z))
+
+    return(list(name="ZAP Global Null Data",
+                Z=Z, X=X, X_f=make_X_f(X), p=p, n=n, K_true=K, p.vals=p.vals, delta=delta, true_pis=true_pis,
+                null_probs=true_pis[,1], is_null=is_null, densities=densities))
+}
+make_all_global_null_instances <- function(file_dir, n=5000, p=2, n_reps=300) {
     stopifnot(file.exists(file_dir))
-    # Hyperparameters
+    for (r in 1:n_reps) {
+        # Generate and cache data
+        data <- make_global_null_dataset(n=n, p=p)
+
+        # Save data
+        filename <- sprintf("zap_global_null_r_%03d.rds", r)
+        saveRDS(data, file.path(file_dir, filename))
+    }
+}
+
+# baseline; smaller
+make_all_base <- function(file_dir, n=5000, n_reps=150) {
     sigma2 <- 1
     epsilons <- matrix(rep(seq(1.3,2.1,by=0.2), 3), nrow=3, byrow=TRUE) # effect size
     zetas <- matrix(c(0,0.5,1,
                       0,0.7,1,
                       0,1.5,3), nrow=3, byrow=TRUE)  # informativeness
     etas <- c(-2, -2.5, -2)  # fixed per setup
+    make_all_simulation_study_dataset_instances(file_dir, n=n, n_reps=n_reps, sigma2=sigma2,
+                                                epsilons=epsilons, zetas=zetas, etas=etas)
+}
+make_all_runtime <- function(file_dir) {
+    eta=-2
+    eps=2.1
+    zeta=1
+    setup=1
+    sigma=1
+    for (n in c(5000,10000,15000,20000,25000,30000)) {
+        data <- make_zap_simulated_dataset(setup, eta, zeta, eps, sigma, n, p=2)
+        filename <- sprintf("runtime_%-4d.rds", n)
+        saveRDS(data, file.path(file_dir, filename))
+    }
+}
+
+# low_variation; high_variation; mod_sparse; high_sparse
+make_all_custom <- function(file_dir, n=5000, n_reps=150) {
+    sigma2 <- 1
+    # low 0.5
+    # high 2
+    epsilons <- matrix(rep(seq(1.3,2.1,by=0.2), 3), nrow=3, byrow=TRUE) # effect size
+    zetas <- matrix(c(0,0.5,1,
+                      0,0.7,1,
+                      0,1.5,3), nrow=3, byrow=TRUE)  # informativeness
+    etas <- c(-2, -2.5, -2)  # fixed per setup
+    # etas <- c(-2.5, -3, -2.5) # med
+    # etas <- c(-3.5, -4, -3.5) # high
+    print("WARNING: CHECK YOUR PARAMETERS")
+    make_all_simulation_study_dataset_instances(file_dir, n=n, n_reps=n_reps, sigma2=sigma2,
+                                                epsilons=epsilons, zetas=zetas, etas=etas)
+}
+# make_all_custom("../performance.testing/data/simulated/med_sparse")
+
+# BASE GENERATING LOGIC
+# Generate required simulated datasets
+make_all_simulation_study_dataset_instances <- function(file_dir, n, n_reps,
+                                                        sigma2, epsilons,
+                                                        zetas, etas) {
+    stopifnot(file.exists(file_dir))
 
     n_setup <- 3
     n_eps <- dim(epsilons)[2]
     n_zetas <- dim(zetas)[2]
-
 
     # data[setup, eps, zeta, rep]
     c <- 1

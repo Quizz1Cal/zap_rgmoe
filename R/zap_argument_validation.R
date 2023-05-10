@@ -1,9 +1,13 @@
 validate_inputs <- function(Z, X, K, lambda, gamma, alpha, sl_thresh,
                              maxit, masking_method, tol, nfits, seed) {
     # Error parsing
+    is_int <- function(x) {
+        return(is.numeric(x) && x %% 1 == 0)
+    }
+
     if (!is.numeric(Z) | any(is.na(Z))) {stop("Invalid `Z` values")}
     if (!is.numeric(X) | any(is.na(X))) {stop("Invalid `X` values")}
-    if (!is.null(K) && (!is.numeric(K) | K %% 1 != 0 | K < 1)) {
+    if (!is.null(K) && (!is_int(K) | K < 1)) {
         stop("`K` must be a positive integer")
     }
     if (!is.numeric(gamma) | any(is.na(gamma))) {stop("Invalid `gamma` value(s)")}
@@ -24,10 +28,10 @@ validate_inputs <- function(Z, X, K, lambda, gamma, alpha, sl_thresh,
     if(alpha > 1) stop("`alpha` must be less than 1")
     if(sl_thresh <=0 | sl_thresh > 0.25) stop("0 < `sl_thresh` <= 0.25")
     if(!is.numeric(tol) | tol <= 0) stop("`tol` must be strictly positive")
-    if (!is.numeric(nfits) | nfits %% 1 != 0 | nfits < 1) {
+    if (!is_int(nfits) | nfits < 1) {
         stop("`nfits` must be a positive integer")
     }
-    if (!is.numeric(maxit) | maxit %% 1 != 0 | maxit < 1) {
+    if (!is_int(maxit) | maxit < 1) {
         stop("`maxit` must be a positive integer")
     }
 
@@ -42,5 +46,5 @@ validate_inputs <- function(Z, X, K, lambda, gamma, alpha, sl_thresh,
     if (!(masking_method %in% c("tent", "symmetric_tent", "basic"))) {
         stop("Invalid selection for `masking_method`")
     }
-    if (!is.integer(seed) & !is.null(seed)) {stop("`seed` must be an integer or NULL")}
+    if (!is_int(seed) & !is.null(seed)) {stop("`seed` must be an integer or NULL")}
 }

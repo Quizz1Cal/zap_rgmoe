@@ -18,7 +18,7 @@ setup_masking_inputs <- function(args) {
         }
     } else if (args$masking_method == "tent") {
         if (all(is.na(c(args$alpha_m, args$nu, args$lambda_m)))) {
-            warning("Unjustified auto-assignment of adapt_GMM parameters")
+            # warning("Unjustified auto-assignment of adapt_GMM parameters")
             args$zeta <- max(2, min(1/args$alpha, 300 / (args$n*args$alpha)))
             args$alpha_m <- 0.9 / (args$zeta + 1)
             args$lambda_m <- args$alpha_m
