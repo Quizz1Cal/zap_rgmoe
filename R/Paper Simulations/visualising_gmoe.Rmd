@@ -1,0 +1,192 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+# Based on this, penalties around 0.1 or lower have similar effect; explodes around 2/3.
+vals <- 10^(-c(4,3,2,1,0,-1,-2,-3,-4))
+res <- list()
+for (i in 1:length(vals)) {
+    v <- vals[i]
+    res_rgmoe <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=4, Lambda=v, Gamma=v))
+    res[[i]] <- res_rgmoe
+}
+```
+
+```{r}
+# Comparing beta-mixture model vs gaussian mixture model vs GMoE model
+# data <- generate_data_with_heterogeneous_behaviour(n=varying)
+
+# Plot fitted densities vs true density
+
+# beta-mix: multinomial pi(x), pil vs pir vs 1-pil - pir
+# and beta densities, regression x-dept, shapes fixed
+
+# setup=3,eta=-2,eps=2.1,zeta=4.5, sigma=2
+# --> Based on BIC, softmix has lowest BIC, i.e. just pi-mixing is sufficient
+# --> which suggests model is still low-complexity.
+# VERIFY with graphic
+
+
+# model | n | K | L | G | BIC | loglik
+results <- list()
+vals <- 10^(-c(3,2,1,0,-1,-2,-3))
+n_vals <- c(500,1000,2000,5000)
+K_vals <- c(2,3,4)
+
+for (i in 1:length(n_vals)) {
+    n <- n_vals[i]
+    data <- zap.rgmoe:::make_zap_simulated_dataset(setup=3,eta=-2,eps=2.1,zeta=4.5, sigma=2,
+                                                   n=n)
+    X_s_f <- data$X_f
+    X_s_f[,-1] <- scale(X_s_f[,-1], center=TRUE, scale=TRUE)
+    Y_s <- as.numeric(scale(data$Z, center=TRUE, scale=FALSE))
+
+    for (j in 1:length(K_vals)) {
+        K <- K_vals[j]
+        print(sprintf("%d - %d", n, K))
+        # gaussian-mix-1: multinomial pi(x), K=3; fk(z) x-indept, var-indept
+        res_softmix <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=K, Lambda=100, Gamma=1e-7))
+        # gaussian-mix-2: multinomial pi x-indept, K=3; fk(z|x) x-dept, var-indept
+        res_gmix <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=K, Lambda=1e-7, Gamma=100))
+        # gaussian-mix-3: pi(x), fk(z|x), var-indept (GMOE), use GaussRMoE with tiny lambda, gamma
+        res_gmoe <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=K, Lambda=1e-7, Gamma=1e-7))
+
+        results[[(length(results) + 1)]] <- c("softmix", n, K, 100, 1e-7, res_softmix$BIC, res_softmix$loglik)
+        results[[(length(results) + 1)]] <- c("gmix", n, K, 1e-7, 100, res_gmix$BIC, res_gmix$loglik)
+        results[[(length(results) + 1)]] <- c("gmoe", n, K, 1e-7, 1e-7, res_gmoe$BIC, res_gmoe$loglik)
+
+        for (v in c(0.1,1,10)) {
+            # gaussian-mix-4: RGMoE, fit with GaussRMoE
+            res_rgmoe <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=K, Lambda=v, Gamma=v))
+            results[[(length(results) + 1)]] <- c(sprintf("Rgmoe_%2.1f", v), n, K, v, v, res_gmoe$BIC, res_gmoe$loglik)
+        }
+    }
+}
+
+df <- do.call(rbind, results)
+colnames(df) <- c("model", "n", "K", "lambda", "gamma", "BIC", "loglik")
+df <- as.data.frame(df)
+for (i in 2:7) {
+    df[[i]] <- as.numeric(unlist(df[i]))
+}
+```
+
+
+```{r}
+# Interested in winner of each category
+# df %>% group_by(n, K) %>% summarize(minBIC = min(BIC),
+#                   minBICmodel = paste(model[which(BIC == min(BIC))], collapse=", "))
+
+library(dplyr)
+library(plotly)
+n_fig <- 0
+figs1 <- list()  # row by col fill-in
+figs2 <- list()
+for (i in 1:length(n_vals)) {  # ns
+    for (j in 1:length(K_vals)) {  # Ks
+        data <- df %>% filter(n==n_vals[i], K==K_vals[j]) %>% ungroup
+        figs1[[n_fig+1]] <- plot_ly(data=data, x=~model, y=~BIC, color=~model,
+                                    showlegend=(n_fig == 11),
+                                    legendgroup=~model, type="bar")
+        figs2[[n_fig+1]] <- plot_ly(data=data, x=~model, y=~loglik, color=~model,
+                                   showlegend=(n_fig == 11),
+                                   legendgroup=~model, type="bar")
+        n_fig <- n_fig+1
+    }
+}
+
+fig1 <- subplot(figs1, nrows=4, shareY=TRUE, shareX=TRUE) %>%
+    layout(title = list(text="testsubplots"))
+fig2 <- subplot(figs2, nrows=4, shareY=TRUE, shareX=TRUE) %>%
+    layout(title = list(text="testsubplots"))
+
+```
+
+```{r}
+# Data to play with
+#data <- zap.rgmoe:::make_zap_simulated_dataset(setup=3,eta=-2,eps=2.1,zeta=4.5, sigma=2,
+#                                                   n=2000)
+#X_s_f <- data$X_f
+#X_s_f[,-1] <- scale(X_s_f[,-1], center=TRUE, scale=TRUE)
+#Y_s <- as.numeric(scale(data$Z, center=TRUE, scale=FALSE))
+#res_gmoe <- withr::with_seed(1, RMoE:::GaussRMoE(X_s_f, Y_s, K=4, Lambda=1e-7, Gamma=1e-7))
+
+data <- withr::with_seed(1, make_test_EM_iteration_instance(K=2, p=1, mask_prop=0))
+data$maxit <- 1300
+data$use_proximal_newton <- F
+data$use_cpp <- T
+data$EM_verbose <- F
+data$tol <- 1e-4
+
+zap_params <- withr::with_seed(1, EM_run(data, model_init=data, args=data))
+
+# Visualising a fitted model
+
+rmoe_density <- function(y, x_f, rmoe_res) {
+    # Assumes x_f = c(1, ...) will match-dimensions with $p$ in model
+    pik <- cpp_pi_matrix(matrix(x_f, nrow=1), t(rmoe_res$wk))
+    means <- x_f %*% rmoe_res$betak
+    density <- sum(pik * stats::dnorm(y, mean=means, sd=(rmoe_res$sigma)))
+    return(density)
+}
+
+zapgmoe_density <- function(y, x_f, params) {
+    # Assumes x_f = c(1, ...), that params' implied p matches x_f
+    pik <- cpp_pi_matrix(matrix(x_f, nrow=1), params$w_f)
+    means <- x_f %*% params$beta_f
+    density <- sum(pik * stats::dnorm(y, mean=means, sd=sqrt(params$sigma2)))
+    return(density)
+}
+
+# Plot for p=1
+#generate_plotpoints_p1(zapgmoe_density, zap_params)
+plotpoints_p1 <- function(density_f, dens_args) {
+    xdir <- seq(-3, 3, length=150)
+    zvaldir <- xdir
+    hdir <- c()
+    for (x in xdir) {
+        for (zval in zvaldir) {
+            hdir[length(hdir)+1] <- density_f(zval, c(1,x), dens_args)
+        }
+    }
+    hdir <- matrix(hdir, nrow=length(xdir), byrow=T)  # each row is fixed x
+    return(list(x=xdir,y=zvaldir,z=hdir))
+}
+
+# plot density level surfaces in y over x_f field (p=2)
+#generate_plotpoints_p2(3, zapgmoe_density, zap_params)
+#generate_plotpoints_p2(3, rmoe_density, res_gmoe)
+plotpoints_p2 <- function(Zval, density_f, dens_args) {
+    xdir <- seq(-6, 6, length=150)
+    ydir <- xdir
+    zdir <- c()
+    for (x in xdir) {
+        for (y in ydir) {
+            zdir[length(zdir)+1] <- density_f(Zval, c(1,x,y), dens_args)
+        }
+    }
+    zdir <- matrix(zdir, nrow=length(xdir), byrow=T)  # each row is fixed x
+    return(list(x=xdir,y=ydir,z=zdir))
+}
+
+plot_3D <- function(plotpoints, theta=45, phi=50) {
+  op <- par(bg = "white")
+    plot3D::persp3D(plotpoints$x, plotpoints$y, plotpoints$z, 
+                    theta = theta, phi = phi, ticktype="simple")
+          # col = "lightblue")  
+}
+
+# Plot original data?
+
+
+```
+
+## Observations
+
+With $p=1$ we observe that the "joint" is certainly not a proper probability distribution. However (as is probably expected from the definition) the conditionals (i.e. p(z|x)) are, to a certain degree of numerical approximation error in my integration approach.
+
+Could be interesting to compare these distribution visuals at $p=1$ to the original dataset.
+

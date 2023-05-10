@@ -2,11 +2,11 @@ test_that("setup_masking_inputs works", {
     initialise_args <- function(alpha_m=NA, lambda_m=NA, nu=NA,
                                 masking_method="basic") {
         return(list(alpha_m=alpha_m, lambda_m=lambda_m, nu=nu,
-                    masking_method=masking_method))
+                    masking_method=masking_method, zap_verbose=F))
     }
 
     expect_equal(setup_masking_inputs(initialise_args(masking_method="symmetric_tent")),
-                 list(alpha_m=0.5, lambda_m=0.5, nu=1, masking_method="symmetric_tent", zeta=1))
+                 list(alpha_m=0.5, lambda_m=0.5, nu=1, masking_method="symmetric_tent", zap_verbose=F, zeta=1))
     expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=0.8, masking_method="symmetric_tent")),
                  regexp="*cannot use specified")
     expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=0.6, lambda_m=0.05, masking_method="symmetric_tent")),
@@ -14,10 +14,10 @@ test_that("setup_masking_inputs works", {
     expect_error(setup_masking_inputs(initialise_args(alpha_m=0.1, nu=1.1, lambda_m=0.15, masking_method="symmetric_tent")),
                  regexp="*constraints not met")
     expect_equal(setup_masking_inputs(initialise_args(0.1, 0.1, 0.6, masking_method="tent")),
-                 list(alpha_m=0.1, lambda_m=0.1, nu=0.6, masking_method="tent", zeta=5))
+                 list(alpha_m=0.1, lambda_m=0.1, nu=0.6, masking_method="tent", zap_verbose=F, zeta=5))
 })
 
-test_that("Z-masking (basic method)", {
+test_that("basic masking works", {
     z <- qnorm(c(0.4,0.9))
     out <- mask_data(list(Z=z), list(masking_method="basic", n=length(z)))
     expect_equal(out$Zs,

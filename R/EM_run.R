@@ -1,7 +1,7 @@
 #' Title
 #'
 #' @return list of parameter estimates (w_f, beta_f, sigma2)
-EM_run <- function(data, model_init=model_params, args=args) {
+EM_run <- function(data, model_init=model_params, args=args, use_squarem=TRUE) {
     stop_if_inconsistent_dims(data, model_init, args)
     if (args$EM_verbose) {
         message("|| EM Algorithm Received Initial Model:")
@@ -13,10 +13,17 @@ EM_run <- function(data, model_init=model_params, args=args) {
     par_vec <- c(model_init$w_f, model_init$beta_f, model_init$sigma2)
 
     # WARNING: fpiter forced, SQUAREM attempts to push sigma < 0
-    res <- SQUAREM::fpiter(par_vec, fixptfn=EM_fixed_pt_fn,
-                           objfn=EM_objfn,
-                           data=data, args=args,
-                           control=list(tol=args$tol, maxiter=args$maxit))
+    if (use_squarem) {
+        res <- SQUAREM::squarem(par_vec, fixptfn=EM_fixed_pt_fn,
+                    data=data, args=args,
+                    control=list(tol=args$tol, maxiter=args$maxit))
+    } else {
+        if (args$maxit < 50) {warning("Sub-optimality may occur at low maxit")}
+        res <- SQUAREM::fpiter(par_vec, fixptfn=EM_fixed_pt_fn,
+                    objfn=EM_objfn,
+                    data=data, args=args,
+                    control=list(tol=args$tol, maxiter=args$maxit))
+    }
     if (!res$convergence) {
         warning(sprintf("DID NOT CONVERGE @ maxit=%d, tol=%.1e", args$maxit, args$tol))
     }
@@ -62,8 +69,9 @@ EM_fixed_pt_fn <- function(params_vec, data, args) {
     is_masked <- data$is_masked
     X_f <- data$X_f
 
+    # TODO: Remove
     if (any(is.na(sigma2)) | any(sigma2 <= 0)) {
-        browser()
+        if (EM_verbose) {browser()}
     }
 
     # Temporary workaround - setting Zs[masked,i] <- (Zmi0, Zmi1)
@@ -105,6 +113,7 @@ EM_fixed_pt_fn <- function(params_vec, data, args) {
             stop("Sigma2 computed invalid values")
         }
     }
+    sigma2 <- pmax(sigma2, 1e-5)  # modified
     if (args$EM_verbose) {
         L2 <- loglik(data, params, args)
         EM_print_header(L2)

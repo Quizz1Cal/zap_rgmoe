@@ -16,8 +16,14 @@ loglik <- function(data, params, args) {
 
     LL = sum(log(mixture_densities))
     # penalties on coefficient components of beta, w
-    expert_pen = sum(args$lambda*colSums(abs(params$beta_f[-1,])))
-    if (args$K > 2) {
+    # Conditionals required to handle low-dimensions
+
+    if (args$p > 1) {
+        expert_pen = sum(args$lambda*colSums(abs(params$beta_f[-1,])))
+    } else {
+        expert_pen = sum(args$lambda*sum(abs(params$beta_f[-1,])))
+    }
+    if (args$K > 2 & args$p > 1) {
         w_1norm = colSums(abs(params$w_f[-1,]))
     } else {
         w_1norm = sum(abs(params$w_f[-1,]))
